@@ -16,12 +16,18 @@ Built with **electron-vite + React + TypeScript + MUI**, sharing the Hybrasyl th
 
 ## Data
 
-Readings are stored as JSON in Electron's `userData` directory:
+Readings and settings are stored as JSON in the roaming app-data directory,
+`%APPDATA%/Themisco/Corvath/` on Windows:
 
 - `readings.json` — `{ version: 1, readings: Reading[] }`
 - `settings.json` — `{ theme }`
 
-On Windows this is `%APPDATA%/corvath/`.
+Writes are crash-safe: each file is written to a `.tmp` sibling and atomically
+renamed over the primary, the previous version is rotated to a `.bak.json`, and
+a corrupt primary is automatically recovered from its backup on next load.
+
+Disposable cache (Electron `userData`) lives separately in
+`%LOCALAPPDATA%/Themisco/Corvath/`.
 
 ## Scripts
 

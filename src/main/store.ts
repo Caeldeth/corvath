@@ -1,51 +1,62 @@
-import { app } from 'electron'
-import { promises as fs } from 'fs'
-import { join } from 'path'
-import type { Reading, Settings } from '../shared/types'
+import type { Reading, Settings, ThemeName } from '../shared/types'
+import { createJsonStore } from './jsonStore'
 
-const READINGS_VERSION = 1
-
-const readingsFile = (): string => join(app.getPath('userData'), 'readings.json')
-const settingsFile = (): string => join(app.getPath('userData'), 'settings.json')
-
+const THEME_NAMES: ThemeName[] = ['hybrasyl', 'danaan', 'chadul', 'grinneal']
 const DEFAULT_SETTINGS: Settings = { theme: 'hybrasyl' }
 
-/** Write atomically: write a temp file, then rename over the target. */
-async function atomicWrite(file: string, data: string): Promise<void> {
-  const tmp = `${file}.tmp`
-  await fs.writeFile(tmp, data, 'utf-8')
-  await fs.rename(tmp, file)
+const READINGS_VERSION = 1
+interface ReadingsFile {
+  version: number
+  readings: Reading[]
+}
+const DEFAULT_READINGS_FILE: ReadingsFile = { version: READINGS_VERSION, readings: [] }
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === 'object'
 }
 
-function isMissing(err: unknown): boolean {
-  return (err as NodeJS.ErrnoException)?.code === 'ENOENT'
+export interface Stores {
+  loadSettings(): Promise<Settings>
+  saveSettings(settings: Settings): Promise<void>
+  loadReadings(): Promise<Reading[]>
+  saveReadings(readings: Reading[]): Promise<void>
 }
 
-export async function loadReadings(): Promise<Reading[]> {
-  try {
-    const raw = await fs.readFile(readingsFile(), 'utf-8')
-    const parsed = JSON.parse(raw)
-    return Array.isArray(parsed?.readings) ? (parsed.readings as Reading[]) : []
-  } catch (err) {
-    if (isMissing(err)) return []
-    throw err
+/**
+ * Create the hardened settings + readings stores rooted at `dir`
+ * (the roaming app-data directory). Both files are crash-safe and recover
+ * from a backup if the primary is corrupted.
+ */
+export function createStores(dir: string): Stores {
+  const settings = createJsonStore<Settings>({
+    dir,
+    filename: 'settings.json',
+    defaults: DEFAULT_SETTINGS,
+    normalize: (data) => {
+      if (!isObject(data)) return null
+      const theme = data.theme
+      return {
+        theme: THEME_NAMES.includes(theme as ThemeName)
+          ? (theme as ThemeName)
+          : DEFAULT_SETTINGS.theme
+      }
+    }
+  })
+
+  const readings = createJsonStore<ReadingsFile>({
+    dir,
+    filename: 'readings.json',
+    defaults: DEFAULT_READINGS_FILE,
+    normalize: (data) => {
+      if (!isObject(data) || !Array.isArray(data.readings)) return null
+      return { version: READINGS_VERSION, readings: data.readings as Reading[] }
+    }
+  })
+
+  return {
+    loadSettings: () => settings.load(),
+    saveSettings: (value) => settings.save(value),
+    loadReadings: () => readings.load().then((file) => file.readings),
+    saveReadings: (value) => readings.save({ version: READINGS_VERSION, readings: value })
   }
-}
-
-export async function saveReadings(readings: Reading[]): Promise<void> {
-  await atomicWrite(readingsFile(), JSON.stringify({ version: READINGS_VERSION, readings }, null, 2))
-}
-
-export async function loadSettings(): Promise<Settings> {
-  try {
-    const raw = await fs.readFile(settingsFile(), 'utf-8')
-    return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) }
-  } catch (err) {
-    if (isMissing(err)) return { ...DEFAULT_SETTINGS }
-    throw err
-  }
-}
-
-export async function saveSettings(settings: Settings): Promise<void> {
-  await atomicWrite(settingsFile(), JSON.stringify(settings, null, 2))
 }
