@@ -14,6 +14,7 @@ import {
 import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import type { Deck, DeckCard } from '../../../../shared/types'
+import { cardPlaceholderDataUrl } from '../../lib/cardPlaceholder'
 
 interface CardEditorProps {
   deck: Deck
@@ -38,7 +39,7 @@ export default function CardEditor({
 
   const imageSrc = card.image
     ? `${window.api.decks.imageUrl(deck.id, card.image)}?v=${encodeURIComponent(deck.updatedAt)}`
-    : null
+    : cardPlaceholderDataUrl(card.name)
 
   return (
     <Dialog open onClose={onClose} maxWidth="sm" fullWidth>
@@ -72,15 +73,11 @@ export default function CardEditor({
                 bgcolor: 'background.default'
               }}
             >
-              {imageSrc ? (
-                <img
-                  src={imageSrc}
-                  alt={card.name}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
-              ) : (
-                <ImageOutlinedIcon sx={{ opacity: 0.4 }} />
-              )}
+              <img
+                src={imageSrc}
+                alt={card.name}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
             </Box>
             <Stack spacing={1} sx={{ flexGrow: 1 }}>
               <TextField

@@ -1,6 +1,6 @@
 import { Box, Card, CardActionArea, Typography } from '@mui/material'
-import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined'
 import type { Deck, DeckCard } from '../../../../shared/types'
+import { cardPlaceholderDataUrl } from '../../lib/cardPlaceholder'
 
 interface CardThumbProps {
   deck: Deck
@@ -11,7 +11,7 @@ interface CardThumbProps {
 export default function CardThumb({ deck, card, onClick }: CardThumbProps) {
   const imageSrc = card.image
     ? `${window.api.decks.imageUrl(deck.id, card.image)}?v=${encodeURIComponent(deck.updatedAt)}`
-    : null
+    : cardPlaceholderDataUrl(card.name)
   const hasMeaning = !!(card.meaning && card.meaning.trim())
 
   return (
@@ -30,15 +30,11 @@ export default function CardThumb({ deck, card, onClick }: CardThumbProps) {
             position: 'relative'
           }}
         >
-          {imageSrc ? (
-            <img
-              src={imageSrc}
-              alt={card.name}
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-            />
-          ) : (
-            <ImageOutlinedIcon sx={{ opacity: 0.35, fontSize: 40 }} />
-          )}
+          <img
+            src={imageSrc}
+            alt={card.name}
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          />
           {card.section === 'major' && card.number !== undefined && (
             <Box
               sx={{
