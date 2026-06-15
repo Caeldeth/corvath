@@ -3,7 +3,7 @@ import { Box, CssBaseline, ThemeProvider, Typography } from '@mui/material'
 import type { ThemeName } from '../../shared/types'
 import { hybrasylTheme, themes } from './themes'
 import { useReadings } from './hooks/useReadings'
-import TopBar from './components/TopBar'
+import TitleBar from './components/TitleBar'
 import ReadingList from './components/ReadingList'
 import ReadingEditor from './components/ReadingEditor'
 
@@ -64,7 +64,7 @@ function App(): React.JSX.Element {
           bgcolor: 'background.default'
         }}
       >
-        <TopBar themeName={themeName} onThemeChange={changeTheme} />
+        <TitleBar themeName={themeName} onThemeChange={changeTheme} />
 
         <Box sx={{ flexGrow: 1, display: 'flex', minHeight: 0 }}>
           <ReadingList

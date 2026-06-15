@@ -31,6 +31,16 @@ export interface Settings {
   theme: ThemeName
 }
 
+/** Custom frameless-window controls exposed to the renderer. */
+export interface WindowControls {
+  minimize(): void
+  toggleMaximize(): void
+  close(): void
+  isMaximized(): Promise<boolean>
+  /** Subscribe to maximize/restore changes; returns an unsubscribe function. */
+  onMaximizeChange(callback: (maximized: boolean) => void): () => void
+}
+
 /** The surface exposed to the renderer on `window.api`. */
 export interface TarotApi {
   readings: {
@@ -39,4 +49,5 @@ export interface TarotApi {
   }
   loadSettings(): Promise<Settings>
   saveSettings(settings: Settings): Promise<void>
+  window: WindowControls
 }
