@@ -4,6 +4,11 @@ A small Electron desktop app for recording tarot readings. Each **reading** is a
 (title, date, and deck) containing a list of **cards** — each with a topic, a question, and
 the interpreted meaning, plus an optional drawn-card name and orientation.
 
+A **deck builder** (Decks tab) defines the decks: structure-agnostic, so it handles standard
+decks (Thoth, Rider-Waite-Smith — both seeded) and custom ones like the Hybrasyl deck with an
+arbitrary number of major arcana and custom suit/court names. Each card can hold meanings,
+keywords, and an imported image. The recorder's deck field offers the builder's deck names.
+
 Built with **electron-vite + React + TypeScript + MUI**, sharing the Hybrasyl theme system
 (Hybrasyl / Danaan / Chadul / Grinneal) used across the other Dark Ages tools.
 
@@ -16,11 +21,14 @@ Built with **electron-vite + React + TypeScript + MUI**, sharing the Hybrasyl th
 
 ## Data
 
-Readings and settings are stored as JSON in the roaming app-data directory,
-`%APPDATA%/Themisco/Corvath/` on Windows:
+Readings, decks, and settings are stored as JSON in the roaming app-data
+directory, `%APPDATA%/Themisco/Corvath/` on Windows:
 
 - `readings.json` — `{ version: 1, readings: Reading[] }`
+- `decks.json` — `{ version: 1, decks: Deck[] }`
 - `settings.json` — `{ theme }`
+- `decks/<deckId>/` — imported card images, served to the UI via the
+  `corvath-asset://` protocol
 
 Writes are crash-safe: each file is written to a `.tmp` sibling and atomically
 renamed over the primary, the previous version is rotated to a `.bak.json`, and

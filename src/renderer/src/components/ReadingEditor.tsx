@@ -11,10 +11,10 @@ import AddIcon from '@mui/icons-material/Add'
 import type { Entry, Reading } from '../../../shared/types'
 import EntryCard from './EntryCard'
 
-const DECK_OPTIONS = ['Thoth', 'Rider-Waite-Smith', 'Marseille', 'Other']
-
 interface ReadingEditorProps {
   reading: Reading
+  /** Deck names from the deck builder, used as Autocomplete options. */
+  deckOptions: string[]
   onChange: (patch: Partial<Reading>) => void
   onAddEntry: () => void
   onUpdateEntry: (entryId: string, patch: Partial<Entry>) => void
@@ -23,6 +23,7 @@ interface ReadingEditorProps {
 
 export default function ReadingEditor({
   reading,
+  deckOptions,
   onChange,
   onAddEntry,
   onUpdateEntry,
@@ -49,7 +50,7 @@ export default function ReadingEditor({
           />
           <Autocomplete
             freeSolo
-            options={DECK_OPTIONS}
+            options={deckOptions}
             value={reading.deck}
             onInputChange={(_e, value) => onChange({ deck: value })}
             sx={{ flexGrow: 1, minWidth: 220 }}
