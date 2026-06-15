@@ -4,6 +4,8 @@ import { join } from 'path'
 export interface JsonStore<T> {
   load(): Promise<T>
   save(data: T): Promise<void>
+  /** Whether the primary file already exists (used to detect first run). */
+  exists(): Promise<boolean>
 }
 
 export interface JsonStoreOptions<T> {
@@ -107,5 +109,14 @@ export function createJsonStore<T>(options: JsonStoreOptions<T>): JsonStore<T> {
     return op
   }
 
-  return { load, save }
+  async function exists(): Promise<boolean> {
+    try {
+      await fs.access(primary)
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  return { load, save, exists }
 }

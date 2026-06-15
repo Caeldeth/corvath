@@ -31,6 +31,47 @@ export interface Settings {
   theme: ThemeName
 }
 
+export type CardSection = 'major' | 'minor'
+
+/** A single card definition within a deck. */
+export interface DeckCard {
+  id: string
+  section: CardSection
+  name: string
+  /** Major-arcana ordinal (e.g. 0..N); unused for minors. */
+  number?: number
+  /** Minor-arcana suit name (matches one of the deck's `suits`). */
+  suit?: string
+  /** Minor-arcana rank (one of the deck's `pipRanks` or `courtRanks`). */
+  rank?: string
+  /** Imported image filename, relative to the deck's image folder. */
+  image?: string
+  keywords?: string[]
+  meaning?: string
+  meaningReversed?: string
+}
+
+/**
+ * A tarot deck. Structure-agnostic: any number of majors, any suit/rank names —
+ * "standard" is just one configuration. Minor cards are generated from
+ * `suits` × (`pipRanks` + `courtRanks`) but stored explicitly so per-card
+ * meanings and images persist across structure edits.
+ */
+export interface Deck {
+  id: string
+  name: string
+  description?: string
+  /** True for seeded decks (Thoth/RWS/Hybrasyl); still fully editable. */
+  builtIn?: boolean
+  suits: string[]
+  pipRanks: string[]
+  courtRanks: string[]
+  supportsReversed: boolean
+  cards: DeckCard[]
+  createdAt: string
+  updatedAt: string
+}
+
 /** Custom frameless-window controls exposed to the renderer. */
 export interface WindowControls {
   minimize(): void
@@ -41,11 +82,25 @@ export interface WindowControls {
   onMaximizeChange(callback: (maximized: boolean) => void): () => void
 }
 
+/** Result of importing an image file for a card. */
+export interface SavedImage {
+  /** Filename to store on the card and reference via `corvath-asset://`. */
+  filename: string
+}
+
 /** The surface exposed to the renderer on `window.api`. */
 export interface TarotApi {
   readings: {
     getAll(): Promise<Reading[]>
     save(readings: Reading[]): Promise<void>
+  }
+  decks: {
+    getAll(): Promise<Deck[]>
+    save(decks: Deck[]): Promise<void>
+    /** Copy raw image bytes into the deck's image folder; returns the stored filename. */
+    saveImage(deckId: string, cardId: string, ext: string, data: Uint8Array): Promise<SavedImage>
+    /** Build the `corvath-asset://` URL for a stored image (cache-busted). */
+    imageUrl(deckId: string, filename: string): string
   }
   loadSettings(): Promise<Settings>
   saveSettings(settings: Settings): Promise<void>

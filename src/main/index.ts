@@ -1,12 +1,13 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
-import { join } from 'path'
+import { app, shell, BrowserWindow, ipcMain, protocol } from 'electron'
+import { join, extname } from 'path'
+import { readFile } from 'fs/promises'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { createStores } from './store'
-import type { Reading, Settings } from '../shared/types'
+import type { Deck, Reading, Settings } from '../shared/types'
 
-// Roaming settings + readings live in %APPDATA%/Themisco/Corvath; disposable
-// cache (userData) goes in %LOCALAPPDATA%/Themisco/Corvath. Electron dropped
-// getPath('cache'), so we resolve LOCALAPPDATA ourselves (mirrors taliesin).
+// Roaming settings + readings + decks live in %APPDATA%/Themisco/Corvath; the
+// disposable cache (userData) goes in %LOCALAPPDATA%/Themisco/Corvath. Electron
+// dropped getPath('cache'), so we resolve LOCALAPPDATA ourselves (mirrors taliesin).
 const COMPANY = 'Themisco'
 const APP_DIR = 'Corvath'
 const dataPath = join(app.getPath('appData'), COMPANY, APP_DIR)
@@ -14,6 +15,40 @@ const localAppData = process.env.LOCALAPPDATA ?? join(app.getPath('home'), 'AppD
 app.setPath('userData', join(localAppData, COMPANY, APP_DIR))
 
 const store = createStores(dataPath)
+
+// Custom scheme for serving imported deck images to the renderer. Registered as
+// privileged so it's treated as secure and usable from <img>/fetch under CSP.
+protocol.registerSchemesAsPrivileged([
+  { scheme: 'corvath-asset', privileges: { standard: true, secure: true, supportFetchAPI: true } }
+])
+
+const IMAGE_MIME: Record<string, string> = {
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp',
+  '.bmp': 'image/bmp',
+  '.svg': 'image/svg+xml'
+}
+
+// corvath-asset://img/<deckId>/<filename> → <dataPath>/decks/<deckId>/<filename>
+async function handleAssetRequest(request: Request): Promise<Response> {
+  try {
+    const url = new URL(request.url)
+    const [deckId, ...rest] = url.pathname.replace(/^\/+/, '').split('/')
+    const filePath = store.resolveImagePath(
+      decodeURIComponent(deckId ?? ''),
+      decodeURIComponent(rest.join('/'))
+    )
+    if (!filePath) return new Response('Not found', { status: 404 })
+    const data = await readFile(filePath)
+    const mime = IMAGE_MIME[extname(filePath).toLowerCase()] ?? 'application/octet-stream'
+    return new Response(new Uint8Array(data), { headers: { 'content-type': mime } })
+  } catch {
+    return new Response('Not found', { status: 404 })
+  }
+}
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -53,18 +88,32 @@ function createWindow(): void {
   }
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   electronApp.setAppUserModelId('com.hybrasyl.corvath')
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
 
+  protocol.handle('corvath-asset', handleAssetRequest)
+
+  await store.ensureDecksSeeded(new Date().toISOString())
+
   // Readings + settings persistence
   ipcMain.handle('readings:getAll', () => store.loadReadings())
   ipcMain.handle('readings:save', (_e, readings: Reading[]) => store.saveReadings(readings))
   ipcMain.handle('settings:load', () => store.loadSettings())
   ipcMain.handle('settings:save', (_e, settings: Settings) => store.saveSettings(settings))
+
+  // Decks persistence + image import
+  ipcMain.handle('decks:getAll', () => store.loadDecks())
+  ipcMain.handle('decks:save', (_e, decks: Deck[]) => store.saveDecks(decks))
+  ipcMain.handle(
+    'decks:saveImage',
+    async (_e, deckId: string, cardId: string, ext: string, data: Uint8Array) => ({
+      filename: await store.saveCardImage(deckId, cardId, ext, data)
+    })
+  )
 
   // Window controls (custom frameless title bar)
   ipcMain.on('window:minimize', (e) => BrowserWindow.fromWebContents(e.sender)?.minimize())

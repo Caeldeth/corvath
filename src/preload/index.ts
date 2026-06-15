@@ -1,11 +1,23 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
-import type { Reading, Settings, TarotApi } from '../shared/types'
+import type { Deck, Reading, SavedImage, Settings, TarotApi } from '../shared/types'
 
 const api: TarotApi = {
   readings: {
     getAll: (): Promise<Reading[]> => ipcRenderer.invoke('readings:getAll'),
     save: (readings: Reading[]): Promise<void> => ipcRenderer.invoke('readings:save', readings)
+  },
+  decks: {
+    getAll: (): Promise<Deck[]> => ipcRenderer.invoke('decks:getAll'),
+    save: (decks: Deck[]): Promise<void> => ipcRenderer.invoke('decks:save', decks),
+    saveImage: (
+      deckId: string,
+      cardId: string,
+      ext: string,
+      data: Uint8Array
+    ): Promise<SavedImage> => ipcRenderer.invoke('decks:saveImage', deckId, cardId, ext, data),
+    imageUrl: (deckId: string, filename: string): string =>
+      `corvath-asset://img/${encodeURIComponent(deckId)}/${encodeURIComponent(filename)}`
   },
   loadSettings: (): Promise<Settings> => ipcRenderer.invoke('settings:load'),
   saveSettings: (settings: Settings): Promise<void> => ipcRenderer.invoke('settings:save', settings),
