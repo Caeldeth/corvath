@@ -2,6 +2,7 @@ import {
   Autocomplete,
   Box,
   Button,
+  Chip,
   Divider,
   FormControl,
   InputLabel,
@@ -59,15 +60,26 @@ export default function ReadingEditor({
   const cardForPosition = (positionId: string): string | undefined =>
     reading.entries.find((e) => e.positionId === positionId)?.card || undefined
 
+  const isCorvath = reading.source === 'corvath'
+
   return (
     <Box sx={{ flexGrow: 1, height: '100%', overflowY: 'auto', p: 3 }}>
       <Stack spacing={2.5} sx={{ maxWidth: 760, mx: 'auto' }}>
-        <TextField
-          label="Title"
-          value={reading.title}
-          onChange={(e) => onChange({ title: e.target.value })}
-          fullWidth
-        />
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+          <TextField
+            label="Title"
+            value={reading.title}
+            onChange={(e) => onChange({ title: e.target.value })}
+            sx={{ flexGrow: 1 }}
+          />
+          <Chip
+            label={isCorvath ? 'Corvath' : 'Manual'}
+            color={isCorvath ? 'secondary' : 'default'}
+            variant="outlined"
+            size="small"
+            title="How this reading was created"
+          />
+        </Box>
 
         <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
           <TextField
@@ -76,17 +88,17 @@ export default function ReadingEditor({
             value={reading.date}
             onChange={(e) => onChange({ date: e.target.value })}
             InputLabelProps={{ shrink: true }}
-            sx={{ minWidth: 180 }}
+            sx={{ flex: '1 1 180px' }}
           />
           <Autocomplete
             freeSolo
             options={deckOptions}
             value={reading.deck}
             onInputChange={(_e, value) => onChange({ deck: value })}
-            sx={{ flexGrow: 1, minWidth: 220 }}
+            sx={{ flex: '1 1 180px' }}
             renderInput={(params) => <TextField {...params} label="Deck" />}
           />
-          <FormControl size="small" sx={{ minWidth: 200 }}>
+          <FormControl sx={{ flex: '1 1 180px' }}>
             <InputLabel id="layout-label">Layout</InputLabel>
             <Select
               labelId="layout-label"

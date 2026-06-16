@@ -16,6 +16,12 @@ export interface Entry {
   orientation?: Orientation
 }
 
+/**
+ * How a reading was produced: `manual` (entered by hand via "New Reading")
+ * or `corvath` (drawn within the app — a future feature).
+ */
+export type ReadingSource = 'manual' | 'corvath'
+
 /** A reading session: one deck, a date, and a list of entries. */
 export interface Reading {
   id: string
@@ -24,6 +30,8 @@ export interface Reading {
   date: string
   /** Deck used for the whole reading (e.g. "Thoth"). */
   deck: string
+  /** Where the reading came from; defaults to 'manual' for older readings. */
+  source?: ReadingSource
   /** Layout/spread applied to this reading, if any. */
   layoutId?: string
   layoutName?: string

@@ -51,6 +51,7 @@ export function useReadings(): UseReadings {
       title: 'Untitled Reading',
       date: today(),
       deck: 'Thoth',
+      source: 'manual',
       entries: [newEntry()],
       createdAt: nowIso(),
       updatedAt: nowIso()
