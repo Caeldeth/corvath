@@ -9,12 +9,14 @@ import {
   Stack,
   Switch,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
   Tooltip,
   Typography
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
-import type { Layout, LayoutPosition } from '../../../../shared/types'
+import type { DeckSource, Layout, LayoutPosition } from '../../../../shared/types'
 import LayoutBoard from './LayoutBoard'
 
 interface LayoutEditorProps {
@@ -120,6 +122,23 @@ export default function LayoutEditor({
                 }
                 label="Rotate 90° (crossing card)"
               />
+              <Box>
+                <Typography variant="caption" sx={{ display: 'block', mb: 0.5, opacity: 0.8 }}>
+                  Draw from deck
+                </Typography>
+                <ToggleButtonGroup
+                  exclusive
+                  size="small"
+                  value={selected.source ?? null}
+                  onChange={(_e, value: DeckSource | null) =>
+                    onUpdatePosition(selected.id, { source: value ?? undefined })
+                  }
+                  aria-label="draw from deck"
+                >
+                  <ToggleButton value="top">Top of deck</ToggleButton>
+                  <ToggleButton value="bottom">Bottom of deck</ToggleButton>
+                </ToggleButtonGroup>
+              </Box>
             </Stack>
           </Paper>
         ) : (

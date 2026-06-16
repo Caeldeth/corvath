@@ -98,6 +98,22 @@ export default function LayoutBoard({
               userSelect: 'none'
             }}
           >
+            {position.source && (
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: 2,
+                  right: 3,
+                  fontSize: '0.6rem',
+                  fontWeight: 700,
+                  lineHeight: 1,
+                  color: 'secondary.light'
+                }}
+                title={position.source === 'top' ? 'Top of deck' : 'Bottom of deck'}
+              >
+                {position.source === 'top' ? '↑' : '↓'}
+              </Box>
+            )}
             <Box sx={{ fontWeight: 700, fontSize: '0.9rem', lineHeight: 1 }}>{index + 1}</Box>
             <Box
               sx={{

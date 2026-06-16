@@ -32,6 +32,9 @@ export interface Reading {
   updatedAt: string
 }
 
+/** Whether a position's card is drawn from the top or bottom of the deck. */
+export type DeckSource = 'top' | 'bottom'
+
 /** A single slot in a spread, placed on a normalized 0..1 board. */
 export interface LayoutPosition {
   id: string
@@ -42,6 +45,8 @@ export interface LayoutPosition {
   y: number
   /** Rotation in degrees (e.g. 90 for a Celtic Cross "crossing" card). */
   rotation?: number
+  /** Draw this card from the top or bottom of the deck (mutually exclusive). */
+  source?: DeckSource
 }
 
 /** A reading layout / spread: an arrangement of named positions. */
