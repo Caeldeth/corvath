@@ -1,18 +1,19 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Box, Typography } from '@mui/material'
-import type { Layout } from '../../../shared/types'
+import type { Deck, Layout } from '../../../shared/types'
 import { useReadings } from '../hooks/useReadings'
 import ReadingList from '../components/ReadingList'
 import ReadingEditor from '../components/ReadingEditor'
+import ImportDialog from '../components/ImportDialog'
 
 interface ReadingsProps {
-  /** Deck names from the builder, offered in the reading's deck field. */
-  deckNames: string[]
+  /** Decks from the builder — for the deck field and card meanings. */
+  decks: Deck[]
   /** Layouts from the builder, offered as spreads. */
   layouts: Layout[]
 }
 
-export default function Readings({ deckNames, layouts }: ReadingsProps) {
+export default function Readings({ decks, layouts }: ReadingsProps) {
   const {
     readings,
     loaded,
@@ -22,9 +23,11 @@ export default function Readings({ deckNames, layouts }: ReadingsProps) {
     addEntry,
     updateEntry,
     deleteEntry,
-    applyLayout
+    applyLayout,
+    importReadings
   } = useReadings()
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [importOpen, setImportOpen] = useState(false)
 
   useEffect(() => {
     if (!loaded) return
@@ -45,6 +48,12 @@ export default function Readings({ deckNames, layouts }: ReadingsProps) {
     setSelectedId(reading.id)
   }
 
+  const handleImport = (imported: Parameters<typeof importReadings>[0]): void => {
+    importReadings(imported)
+    setImportOpen(false)
+    if (imported[0]) setSelectedId(imported[0].id)
+  }
+
   return (
     <Box sx={{ flexGrow: 1, display: 'flex', minHeight: 0 }}>
       <ReadingList
@@ -52,13 +61,14 @@ export default function Readings({ deckNames, layouts }: ReadingsProps) {
         selectedId={selectedId}
         onSelect={setSelectedId}
         onCreate={handleCreate}
+        onImport={() => setImportOpen(true)}
         onDelete={deleteReading}
       />
       {selectedReading ? (
         <ReadingEditor
           key={selectedReading.id}
           reading={selectedReading}
-          deckOptions={deckNames}
+          decks={decks}
           layouts={layouts}
           onChange={(patch) => updateReading(selectedReading.id, patch)}
           onApplyLayout={(layout) => applyLayout(selectedReading.id, layout)}
@@ -73,6 +83,13 @@ export default function Readings({ deckNames, layouts }: ReadingsProps) {
           </Typography>
         </Box>
       )}
+
+      <ImportDialog
+        open={importOpen}
+        layouts={layouts}
+        onClose={() => setImportOpen(false)}
+        onImport={handleImport}
+      />
     </Box>
   )
 }

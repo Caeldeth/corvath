@@ -13,14 +13,14 @@ import {
   Typography
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
-import type { Entry, Layout, Reading } from '../../../shared/types'
+import type { Deck, Entry, Layout, Reading } from '../../../shared/types'
 import EntryCard from './EntryCard'
 import LayoutBoard from './layouts/LayoutBoard'
 
 interface ReadingEditorProps {
   reading: Reading
-  /** Deck names from the deck builder, used as Autocomplete options. */
-  deckOptions: string[]
+  /** Decks from the deck builder — used for the deck field and card meanings. */
+  decks: Deck[]
   /** Layouts from the layout builder, offered as spreads. */
   layouts: Layout[]
   onChange: (patch: Partial<Reading>) => void
@@ -32,7 +32,7 @@ interface ReadingEditorProps {
 
 export default function ReadingEditor({
   reading,
-  deckOptions,
+  decks,
   layouts,
   onChange,
   onApplyLayout,
@@ -40,13 +40,13 @@ export default function ReadingEditor({
   onUpdateEntry,
   onDeleteEntry
 }: ReadingEditorProps) {
+  const deckOptions = decks.map((d) => d.name).filter(Boolean)
+  const currentDeck = decks.find((d) => d.name === reading.deck) ?? null
   const activeLayout = layouts.find((l) => l.id === reading.layoutId) ?? null
 
   const handleSelectLayout = (layoutId: string): void => {
     const layout = layouts.find((l) => l.id === layoutId) ?? null
-    const hasContent = reading.entries.some(
-      (e) => e.topic || e.question || e.meaning || e.card
-    )
+    const hasContent = reading.entries.some((e) => e.topic || e.question || e.card)
     if (
       hasContent &&
       !window.confirm('Applying a layout replaces the current cards. Continue?')
@@ -153,12 +153,24 @@ export default function ReadingEditor({
                 key={entry.id}
                 entry={entry}
                 index={index}
+                deck={currentDeck}
                 onChange={(patch) => onUpdateEntry(entry.id, patch)}
                 onDelete={() => onDeleteEntry(entry.id)}
               />
             ))}
           </Stack>
         )}
+
+        <Divider>Notes</Divider>
+        <TextField
+          label="Reading notes"
+          placeholder="Overall impressions, narrative, advice…"
+          value={reading.notes ?? ''}
+          onChange={(e) => onChange({ notes: e.target.value })}
+          fullWidth
+          multiline
+          minRows={4}
+        />
       </Stack>
     </Box>
   )

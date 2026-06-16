@@ -7,10 +7,9 @@ export interface Entry {
   id: string
   topic: string
   question: string
-  meaning: string
   /** Links this entry to a layout position, when a layout was applied. */
   positionId?: string
-  /** Optional drawn-card name (e.g. "The Star", "Three of Disks"). */
+  /** Drawn-card name (e.g. "The Star", "Three of Disks"). Required in the UI. */
   card?: string
   /** Optional — orientation is not always tracked (e.g. Thoth deck). */
   orientation?: Orientation
@@ -35,6 +34,8 @@ export interface Reading {
   /** Layout/spread applied to this reading, if any. */
   layoutId?: string
   layoutName?: string
+  /** Free-form overview / interpretation for the whole reading. */
+  notes?: string
   entries: Entry[]
   createdAt: string
   updatedAt: string

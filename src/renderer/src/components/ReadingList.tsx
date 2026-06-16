@@ -10,6 +10,7 @@ import {
   Typography
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
+import FileUploadOutlinedIcon from '@mui/icons-material/FileUploadOutlined'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import type { Reading } from '../../../shared/types'
 
@@ -18,6 +19,7 @@ interface ReadingListProps {
   selectedId: string | null
   onSelect: (id: string) => void
   onCreate: () => void
+  onImport: () => void
   onDelete: (id: string) => void
 }
 
@@ -26,6 +28,7 @@ export default function ReadingList({
   selectedId,
   onSelect,
   onCreate,
+  onImport,
   onDelete
 }: ReadingListProps) {
   // Most recent reading date first.
@@ -43,9 +46,12 @@ export default function ReadingList({
         borderColor: 'divider'
       }}
     >
-      <Box sx={{ p: 1.5 }}>
+      <Box sx={{ p: 1.5, display: 'flex', flexDirection: 'column', gap: 1 }}>
         <Button fullWidth variant="contained" startIcon={<AddIcon />} onClick={onCreate}>
           New Reading
+        </Button>
+        <Button fullWidth startIcon={<FileUploadOutlinedIcon />} onClick={onImport}>
+          Import
         </Button>
       </Box>
 

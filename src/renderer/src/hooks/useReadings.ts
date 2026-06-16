@@ -15,10 +15,11 @@ export interface UseReadings {
   updateEntry: (readingId: string, entryId: string, patch: Partial<Entry>) => void
   deleteEntry: (readingId: string, entryId: string) => void
   applyLayout: (readingId: string, layout: Layout | null) => void
+  importReadings: (incoming: Reading[]) => void
 }
 
 function newEntry(): Entry {
-  return { id: uid(), topic: '', question: '', meaning: '' }
+  return { id: uid(), topic: '', question: '', card: '' }
 }
 
 export function useReadings(): UseReadings {
@@ -121,7 +122,7 @@ export function useReadings(): UseReadings {
           id: uid(),
           topic: position.name,
           question: '',
-          meaning: '',
+          card: '',
           positionId: position.id
         }))
         return {
@@ -135,6 +136,11 @@ export function useReadings(): UseReadings {
     )
   }, [])
 
+  // Prepend imported readings (most recent first).
+  const importReadings = useCallback((incoming: Reading[]): void => {
+    setReadings((prev) => [...incoming, ...prev])
+  }, [])
+
   return {
     readings,
     loaded,
@@ -144,6 +150,7 @@ export function useReadings(): UseReadings {
     addEntry,
     updateEntry,
     deleteEntry,
-    applyLayout
+    applyLayout,
+    importReadings
   }
 }

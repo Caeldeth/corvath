@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Box, CssBaseline, ThemeProvider } from '@mui/material'
 import type { ThemeName } from '../../shared/types'
 import { hybrasylTheme, themes } from './themes'
@@ -27,10 +27,6 @@ function App(): React.JSX.Element {
   }
 
   const theme = themes[themeName] ?? hybrasylTheme
-  const deckNames = useMemo(
-    () => decksApi.decks.map((d) => d.name).filter(Boolean),
-    [decksApi.decks]
-  )
 
   return (
     <ThemeProvider theme={theme}>
@@ -46,7 +42,7 @@ function App(): React.JSX.Element {
         <TitleBar themeName={themeName} onThemeChange={changeTheme} />
         <NavBar view={view} onChange={setView} />
 
-        {view === 'readings' && <Readings deckNames={deckNames} layouts={layoutsApi.layouts} />}
+        {view === 'readings' && <Readings decks={decksApi.decks} layouts={layoutsApi.layouts} />}
         {view === 'decks' && <DeckBuilder api={decksApi} />}
         {view === 'layouts' && <Layouts api={layoutsApi} />}
       </Box>

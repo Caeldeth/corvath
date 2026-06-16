@@ -1,8 +1,11 @@
 # Corvath — Tarot Reading Recorder
 
 A small Electron desktop app for recording tarot readings. Each **reading** is a session
-(title, date, and deck) containing a list of **cards** — each with a topic, a question, and
-the interpreted meaning, plus an optional drawn-card name and orientation.
+(title, date, deck, optional spread) containing a list of **cards** — each with a topic, a
+question, the drawn card, and orientation. A card's meaning is sourced (read-only) from that
+card's definition in the deck, and each reading has a free-form **notes** section for the
+overall interpretation. Readings can be **imported** from JSON (file or paste) — handy for
+bringing in readings authored elsewhere.
 
 A **deck builder** (Decks tab) defines the decks: structure-agnostic, so it handles standard
 decks (Thoth, Rider-Waite-Smith — both seeded) and custom ones like the Hybrasyl deck with an
