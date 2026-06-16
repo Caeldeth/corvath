@@ -14,7 +14,12 @@ const dataPath = join(app.getPath('appData'), COMPANY, APP_DIR)
 const localAppData = process.env.LOCALAPPDATA ?? join(app.getPath('home'), 'AppData', 'Local')
 app.setPath('userData', join(localAppData, COMPANY, APP_DIR))
 
-const store = createStores(dataPath)
+// Bundled (shipped) deck art lives in <appRoot>/bundled/decks/<deckId>/.
+// __dirname is out/main in dev and inside the asar in production; both resolve
+// to a readable bundled/ alongside the app.
+const bundledDecksDir = join(__dirname, '../../bundled/decks')
+
+const store = createStores(dataPath, bundledDecksDir)
 
 // Custom scheme for serving imported deck images to the renderer. Registered as
 // privileged so it's treated as secure and usable from <img>/fetch under CSP.
@@ -32,22 +37,28 @@ const IMAGE_MIME: Record<string, string> = {
   '.svg': 'image/svg+xml'
 }
 
-// corvath-asset://img/<deckId>/<filename> → <dataPath>/decks/<deckId>/<filename>
+// corvath-asset://img/<deckId>/<filename> — try the user's imported image
+// first, then fall back to bundled (shipped) deck art.
 async function handleAssetRequest(request: Request): Promise<Response> {
-  try {
-    const url = new URL(request.url)
-    const [deckId, ...rest] = url.pathname.replace(/^\/+/, '').split('/')
-    const filePath = store.resolveImagePath(
-      decodeURIComponent(deckId ?? ''),
-      decodeURIComponent(rest.join('/'))
-    )
-    if (!filePath) return new Response('Not found', { status: 404 })
-    const data = await readFile(filePath)
-    const mime = IMAGE_MIME[extname(filePath).toLowerCase()] ?? 'application/octet-stream'
-    return new Response(new Uint8Array(data), { headers: { 'content-type': mime } })
-  } catch {
-    return new Response('Not found', { status: 404 })
+  const url = new URL(request.url)
+  const [deckId, ...rest] = url.pathname.replace(/^\/+/, '').split('/')
+  const id = decodeURIComponent(deckId ?? '')
+  const filename = decodeURIComponent(rest.join('/'))
+  const candidates = [
+    store.resolveImagePath(id, filename),
+    store.resolveBundledImagePath(id, filename)
+  ]
+  for (const filePath of candidates) {
+    if (!filePath) continue
+    try {
+      const data = await readFile(filePath)
+      const mime = IMAGE_MIME[extname(filePath).toLowerCase()] ?? 'application/octet-stream'
+      return new Response(new Uint8Array(data), { headers: { 'content-type': mime } })
+    } catch {
+      /* try next candidate */
+    }
   }
+  return new Response('Not found', { status: 404 })
 }
 
 function createWindow(): void {

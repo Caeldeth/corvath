@@ -45,7 +45,7 @@ export interface Stores {
   saveReadings(readings: Reading[]): Promise<void>
   loadDecks(): Promise<Deck[]>
   saveDecks(decks: Deck[]): Promise<void>
-  /** Seed the built-in decks on first run (when no decks file exists yet). */
+  /** Seed built-in decks, merging in any that are missing (e.g. new built-ins). */
   ensureDecksSeeded(now: string): Promise<void>
   loadLayouts(): Promise<Layout[]>
   saveLayouts(layouts: Layout[]): Promise<void>
@@ -53,8 +53,10 @@ export interface Stores {
   ensureLayoutsSeeded(now: string): Promise<void>
   /** Copy raw image bytes into <dir>/decks/<deckId>/, replacing any prior image for the card. */
   saveCardImage(deckId: string, cardId: string, ext: string, data: Uint8Array): Promise<string>
-  /** Absolute path to a stored deck image, or null if it escapes the data dir. */
+  /** Absolute path to a user-imported deck image, or null if it escapes the data dir. */
   resolveImagePath(deckId: string, filename: string): string | null
+  /** Absolute path to a bundled (shipped) deck image, or null if it escapes the bundle. */
+  resolveBundledImagePath(deckId: string, filename: string): string | null
 }
 
 /**
@@ -63,7 +65,7 @@ export interface Stores {
  * from a backup if the primary is corrupted. Deck images live under
  * `<dir>/decks/<deckId>/`.
  */
-export function createStores(dir: string): Stores {
+export function createStores(dir: string, bundledDecksDir: string): Stores {
   const imagesRoot = join(dir, 'decks')
 
   const settings = createJsonStore<Settings>({
@@ -141,11 +143,16 @@ export function createStores(dir: string): Stores {
     return filename
   }
 
-  function resolveImagePath(deckId: string, filename: string): string | null {
-    const target = resolve(imagesRoot, safeSegment(deckId), safeSegment(filename))
-    const base = resolve(imagesRoot)
-    return target.startsWith(base) ? target : null
+  function resolveWithin(root: string, deckId: string, filename: string): string | null {
+    const target = resolve(root, safeSegment(deckId), safeSegment(filename))
+    return target.startsWith(resolve(root)) ? target : null
   }
+
+  const resolveImagePath = (deckId: string, filename: string): string | null =>
+    resolveWithin(imagesRoot, deckId, filename)
+
+  const resolveBundledImagePath = (deckId: string, filename: string): string | null =>
+    resolveWithin(bundledDecksDir, deckId, filename)
 
   return {
     loadSettings: () => settings.load(),
@@ -155,8 +162,19 @@ export function createStores(dir: string): Stores {
     loadDecks: () => decks.load().then((file) => file.decks),
     saveDecks: (value) => decks.save({ version: DECKS_VERSION, decks: value }),
     ensureDecksSeeded: async (now) => {
-      if (await decks.exists()) return
-      await decks.save({ version: DECKS_VERSION, decks: buildSeedDecks(now) })
+      const seeds = buildSeedDecks(now)
+      if (!(await decks.exists())) {
+        await decks.save({ version: DECKS_VERSION, decks: seeds })
+        return
+      }
+      // Merge in any built-in decks the user doesn't have yet (e.g. new ones
+      // added in an update), preserving existing decks and edits.
+      const current = (await decks.load()).decks
+      const have = new Set(current.map((d) => d.id))
+      const missing = seeds.filter((s) => !have.has(s.id))
+      if (missing.length) {
+        await decks.save({ version: DECKS_VERSION, decks: [...current, ...missing] })
+      }
     },
     loadLayouts: () => layouts.load().then((file) => file.layouts),
     saveLayouts: (value) => layouts.save({ version: LAYOUTS_VERSION, layouts: value }),
@@ -165,6 +183,7 @@ export function createStores(dir: string): Stores {
       await layouts.save({ version: LAYOUTS_VERSION, layouts: buildSeedLayouts(now) })
     },
     saveCardImage,
-    resolveImagePath
+    resolveImagePath,
+    resolveBundledImagePath
   }
 }

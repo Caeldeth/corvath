@@ -27,6 +27,32 @@ const THOTH_MAJORS = [
   'The Universe'
 ]
 
+// The Empyrean deck — original, Thoth-adjacent major arcana (art bundled).
+const EMPYREAN_MAJORS = [
+  'The Fool',
+  'The Magician',
+  'The Seer',
+  'The Diva',
+  'The Sovereign',
+  'The Druid',
+  'The Lovers',
+  'The Chariot',
+  'The Covenant',
+  'The Exile',
+  'The Wheel',
+  'Lust',
+  'The Martyr',
+  'Death',
+  'The Alchemist',
+  'The Jailer',
+  'The Tower',
+  'The Star',
+  'The Moon',
+  'The Sun',
+  'The Cosmos',
+  'Acceptance'
+]
+
 const RWS_MAJORS = [
   'The Fool',
   'The Magician',
@@ -59,12 +85,13 @@ function slug(value: string): string {
     .replace(/^-+|-+$/g, '')
 }
 
-function buildMajors(names: string[]): DeckCard[] {
+function buildMajors(names: string[], withImages = false): DeckCard[] {
   return names.map((name, number) => ({
     id: `maj-${number}`,
     section: 'major' as const,
     name,
-    number
+    number,
+    ...(withImages ? { image: `maj-${number}.png` } : {})
   }))
 }
 
@@ -93,6 +120,8 @@ interface DeckSpec {
   courtRanks: string[]
   supportsReversed: boolean
   majors: string[]
+  /** Seed bundled major-arcana art (maj-<n>.png) for this deck. */
+  majorImages?: boolean
 }
 
 const SPECS: DeckSpec[] = [
@@ -117,6 +146,17 @@ const SPECS: DeckSpec[] = [
     majors: RWS_MAJORS
   },
   {
+    id: 'empyrean',
+    name: 'Empyrean',
+    description: 'An original, Thoth-adjacent deck. Major arcana art included.',
+    suits: ['Wands', 'Cups', 'Swords', 'Disks'],
+    pipRanks: PIPS,
+    courtRanks: ['Knight', 'Queen', 'Prince', 'Princess'],
+    supportsReversed: false,
+    majors: EMPYREAN_MAJORS,
+    majorImages: true
+  },
+  {
     id: 'hybrasyl',
     name: 'Hybrasyl',
     description: 'Custom Hybrasyl deck — define your own major arcana and suits.',
@@ -139,7 +179,10 @@ export function buildSeedDecks(now: string): Deck[] {
     pipRanks: spec.pipRanks,
     courtRanks: spec.courtRanks,
     supportsReversed: spec.supportsReversed,
-    cards: [...buildMajors(spec.majors), ...buildMinors(spec.suits, spec.pipRanks, spec.courtRanks)],
+    cards: [
+      ...buildMajors(spec.majors, spec.majorImages),
+      ...buildMinors(spec.suits, spec.pipRanks, spec.courtRanks)
+    ],
     createdAt: now,
     updatedAt: now
   }))
