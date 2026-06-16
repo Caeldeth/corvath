@@ -33,8 +33,6 @@ export default function EntryCard({ entry, index, deck, onChange, onDelete }: En
     ? (isReversed ? deckCard.meaningReversed || deckCard.meaning : deckCard.meaning) ?? ''
     : ''
 
-  const cardMissing = !entry.card?.trim()
-
   const meaningHelp = !deck
     ? 'Set the reading’s deck to one from the Deck builder to show meanings.'
     : !deckCard
@@ -81,26 +79,14 @@ export default function EntryCard({ entry, index, deck, onChange, onDelete }: En
                 value={entry.card ?? ''}
                 onInputChange={(_e, value) => onChange({ card: value })}
                 sx={{ flexGrow: 1, minWidth: 220 }}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="Card drawn"
-                    required
-                    size="small"
-                    error={cardMissing}
-                    helperText={cardMissing ? 'Required' : ' '}
-                  />
-                )}
+                renderInput={(params) => <TextField {...params} label="Card drawn" size="small" />}
               />
             ) : (
               <TextField
                 label="Card drawn"
                 value={entry.card ?? ''}
                 onChange={(e) => onChange({ card: e.target.value })}
-                required
                 size="small"
-                error={cardMissing}
-                helperText={cardMissing ? 'Required' : ' '}
                 sx={{ flexGrow: 1, minWidth: 220 }}
               />
             )}
@@ -136,6 +122,17 @@ export default function EntryCard({ entry, index, deck, onChange, onDelete }: En
             minRows={2}
             size="small"
             helperText={meaningHelp}
+          />
+
+          <TextField
+            label="Notes"
+            placeholder="Your interpretation of this card…"
+            value={entry.notes ?? ''}
+            onChange={(e) => onChange({ notes: e.target.value })}
+            fullWidth
+            multiline
+            minRows={2}
+            size="small"
           />
         </Stack>
       </CardContent>

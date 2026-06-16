@@ -9,10 +9,12 @@ export interface Entry {
   question: string
   /** Links this entry to a layout position, when a layout was applied. */
   positionId?: string
-  /** Drawn-card name (e.g. "The Star", "Three of Disks"). Required in the UI. */
+  /** Drawn-card name (e.g. "The Star", "Three of Disks"). */
   card?: string
   /** Optional — orientation is not always tracked (e.g. Thoth deck). */
   orientation?: Orientation
+  /** Free-form per-card interpretation (distinct from the deck's meaning). */
+  notes?: string
 }
 
 /**

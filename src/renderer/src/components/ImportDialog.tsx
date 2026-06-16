@@ -130,8 +130,8 @@ export default function ImportDialog({ open, layouts, onClose, onImport }: Impor
                   <li>
                     <strong>entries</strong> (required, ≥ 1). Each entry needs{' '}
                     <strong>card</strong>; optional <strong>topic</strong>,{' '}
-                    <strong>question</strong>, and <strong>orientation</strong> (&quot;upright&quot;
-                    or &quot;reversed&quot;).
+                    <strong>question</strong>, <strong>orientation</strong> (&quot;upright&quot; or
+                    &quot;reversed&quot;), and <strong>notes</strong> (per-card interpretation).
                   </li>
                   <li>
                     Optional: <strong>deck</strong> (name), <strong>layout</strong> (name — must

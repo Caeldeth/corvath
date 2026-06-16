@@ -21,9 +21,9 @@ export const IMPORT_EXAMPLE = `[
     "source": "manual",
     "notes": "Overall narrative / interpretation goes here.",
     "entries": [
-      { "topic": "Past",    "question": "What shaped this?", "card": "The Star", "orientation": "upright" },
+      { "topic": "Past", "question": "What shaped this?", "card": "The Star", "orientation": "upright", "notes": "Felt like a turning point." },
       { "topic": "Present", "card": "Two of Cups" },
-      { "topic": "Future",  "card": "The Sun" }
+      { "topic": "Future", "card": "The Sun" }
     ]
   }
 ]`
@@ -102,7 +102,8 @@ export function parseReadingsImport(text: string, layouts: Layout[]): ImportResu
           topic: asString(e.topic) ?? '',
           question: asString(e.question) ?? '',
           card: card ?? '',
-          orientation
+          orientation,
+          notes: asString(e.notes)
         })
       })
     }
