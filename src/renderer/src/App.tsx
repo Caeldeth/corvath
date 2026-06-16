@@ -3,15 +3,18 @@ import { Box, CssBaseline, ThemeProvider } from '@mui/material'
 import type { ThemeName } from '../../shared/types'
 import { hybrasylTheme, themes } from './themes'
 import { useDecks } from './hooks/useDecks'
+import { useLayouts } from './hooks/useLayouts'
 import TitleBar from './components/TitleBar'
 import NavBar, { type View } from './components/NavBar'
 import Readings from './pages/Readings'
 import DeckBuilder from './pages/DeckBuilder'
+import Layouts from './pages/Layouts'
 
 function App(): React.JSX.Element {
   const [themeName, setThemeName] = useState<ThemeName>('hybrasyl')
   const [view, setView] = useState<View>('readings')
   const decksApi = useDecks()
+  const layoutsApi = useLayouts()
 
   // Load the persisted theme once on mount.
   useEffect(() => {
@@ -43,11 +46,9 @@ function App(): React.JSX.Element {
         <TitleBar themeName={themeName} onThemeChange={changeTheme} />
         <NavBar view={view} onChange={setView} />
 
-        {view === 'readings' ? (
-          <Readings deckNames={deckNames} />
-        ) : (
-          <DeckBuilder api={decksApi} />
-        )}
+        {view === 'readings' && <Readings deckNames={deckNames} layouts={layoutsApi.layouts} />}
+        {view === 'decks' && <DeckBuilder api={decksApi} />}
+        {view === 'layouts' && <Layouts api={layoutsApi} />}
       </Box>
     </ThemeProvider>
   )

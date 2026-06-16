@@ -1,6 +1,6 @@
 import { Box, Tab, Tabs } from '@mui/material'
 
-export type View = 'readings' | 'decks'
+export type View = 'readings' | 'decks' | 'layouts'
 
 interface NavBarProps {
   view: View
@@ -13,6 +13,7 @@ export default function NavBar({ view, onChange }: NavBarProps) {
       <Tabs value={view} onChange={(_e, value: View) => onChange(value)} sx={{ minHeight: 40 }}>
         <Tab value="readings" label="Readings" sx={{ minHeight: 40 }} />
         <Tab value="decks" label="Decks" sx={{ minHeight: 40 }} />
+        <Tab value="layouts" label="Layouts" sx={{ minHeight: 40 }} />
       </Tabs>
     </Box>
   )

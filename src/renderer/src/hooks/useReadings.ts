@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { Entry, Reading } from '../../../shared/types'
+import type { Entry, Layout, Reading } from '../../../shared/types'
 
 const uid = (): string => crypto.randomUUID()
 const nowIso = (): string => new Date().toISOString()
@@ -14,6 +14,7 @@ export interface UseReadings {
   addEntry: (readingId: string) => void
   updateEntry: (readingId: string, entryId: string, patch: Partial<Entry>) => void
   deleteEntry: (readingId: string, entryId: string) => void
+  applyLayout: (readingId: string, layout: Layout | null) => void
 }
 
 function newEntry(): Entry {
@@ -105,6 +106,34 @@ export function useReadings(): UseReadings {
     )
   }, [])
 
+  // Apply a layout: replace entries with one per position (topic = position
+  // name), and record which layout was used. Passing null clears the layout
+  // while leaving the entries intact.
+  const applyLayout = useCallback((readingId: string, layout: Layout | null): void => {
+    setReadings((prev) =>
+      prev.map((r) => {
+        if (r.id !== readingId) return r
+        if (!layout) {
+          return { ...r, layoutId: undefined, layoutName: undefined, updatedAt: nowIso() }
+        }
+        const entries: Entry[] = layout.positions.map((position) => ({
+          id: uid(),
+          topic: position.name,
+          question: '',
+          meaning: '',
+          positionId: position.id
+        }))
+        return {
+          ...r,
+          layoutId: layout.id,
+          layoutName: layout.name,
+          entries,
+          updatedAt: nowIso()
+        }
+      })
+    )
+  }, [])
+
   return {
     readings,
     loaded,
@@ -113,6 +142,7 @@ export function useReadings(): UseReadings {
     deleteReading,
     addEntry,
     updateEntry,
-    deleteEntry
+    deleteEntry,
+    applyLayout
   }
 }

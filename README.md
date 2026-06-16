@@ -9,6 +9,11 @@ decks (Thoth, Rider-Waite-Smith — both seeded) and custom ones like the Hybras
 arbitrary number of major arcana and custom suit/court names. Each card can hold meanings,
 keywords, and an imported image. The recorder's deck field offers the builder's deck names.
 
+A **layout builder** (Layouts tab) defines spreads on a visual board: drag positions to
+arrange them, name each slot, and mark crossing cards. Single Card, Three Card, Celtic Cross,
+and Horseshoe ship seeded. Picking a layout in the recorder auto-fills one entry per position
+and shows the spread diagram with the drawn cards.
+
 Built with **electron-vite + React + TypeScript + MUI**, sharing the Hybrasyl theme system
 (Hybrasyl / Danaan / Chadul / Grinneal) used across the other Dark Ages tools.
 
@@ -26,6 +31,7 @@ directory, `%APPDATA%/Themisco/Corvath/` on Windows:
 
 - `readings.json` — `{ version: 1, readings: Reading[] }`
 - `decks.json` — `{ version: 1, decks: Deck[] }`
+- `layouts.json` — `{ version: 1, layouts: Layout[] }`
 - `settings.json` — `{ theme }`
 - `decks/<deckId>/` — imported card images, served to the UI via the
   `corvath-asset://` protocol

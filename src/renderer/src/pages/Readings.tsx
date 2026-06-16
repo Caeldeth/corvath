@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Box, Typography } from '@mui/material'
+import type { Layout } from '../../../shared/types'
 import { useReadings } from '../hooks/useReadings'
 import ReadingList from '../components/ReadingList'
 import ReadingEditor from '../components/ReadingEditor'
@@ -7,9 +8,11 @@ import ReadingEditor from '../components/ReadingEditor'
 interface ReadingsProps {
   /** Deck names from the builder, offered in the reading's deck field. */
   deckNames: string[]
+  /** Layouts from the builder, offered as spreads. */
+  layouts: Layout[]
 }
 
-export default function Readings({ deckNames }: ReadingsProps) {
+export default function Readings({ deckNames, layouts }: ReadingsProps) {
   const {
     readings,
     loaded,
@@ -18,7 +21,8 @@ export default function Readings({ deckNames }: ReadingsProps) {
     deleteReading,
     addEntry,
     updateEntry,
-    deleteEntry
+    deleteEntry,
+    applyLayout
   } = useReadings()
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
@@ -55,7 +59,9 @@ export default function Readings({ deckNames }: ReadingsProps) {
           key={selectedReading.id}
           reading={selectedReading}
           deckOptions={deckNames}
+          layouts={layouts}
           onChange={(patch) => updateReading(selectedReading.id, patch)}
+          onApplyLayout={(layout) => applyLayout(selectedReading.id, layout)}
           onAddEntry={() => addEntry(selectedReading.id)}
           onUpdateEntry={(entryId, patch) => updateEntry(selectedReading.id, entryId, patch)}
           onDeleteEntry={(entryId) => deleteEntry(selectedReading.id, entryId)}
