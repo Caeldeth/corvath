@@ -8,6 +8,8 @@ export interface Entry {
   topic: string
   question: string
   meaning: string
+  /** Links this entry to a layout position, when a layout was applied. */
+  positionId?: string
   /** Optional drawn-card name (e.g. "The Star", "Three of Disks"). */
   card?: string
   /** Optional — orientation is not always tracked (e.g. Thoth deck). */
@@ -22,7 +24,34 @@ export interface Reading {
   date: string
   /** Deck used for the whole reading (e.g. "Thoth"). */
   deck: string
+  /** Layout/spread applied to this reading, if any. */
+  layoutId?: string
+  layoutName?: string
   entries: Entry[]
+  createdAt: string
+  updatedAt: string
+}
+
+/** A single slot in a spread, placed on a normalized 0..1 board. */
+export interface LayoutPosition {
+  id: string
+  name: string
+  meaning?: string
+  /** Card-center coordinates, normalized 0..1 across the board. */
+  x: number
+  y: number
+  /** Rotation in degrees (e.g. 90 for a Celtic Cross "crossing" card). */
+  rotation?: number
+}
+
+/** A reading layout / spread: an arrangement of named positions. */
+export interface Layout {
+  id: string
+  name: string
+  description?: string
+  /** True for seeded spreads; still fully editable. */
+  builtIn?: boolean
+  positions: LayoutPosition[]
   createdAt: string
   updatedAt: string
 }
@@ -101,6 +130,10 @@ export interface TarotApi {
     saveImage(deckId: string, cardId: string, ext: string, data: Uint8Array): Promise<SavedImage>
     /** Build the `corvath-asset://` URL for a stored image (cache-busted). */
     imageUrl(deckId: string, filename: string): string
+  }
+  layouts: {
+    getAll(): Promise<Layout[]>
+    save(layouts: Layout[]): Promise<void>
   }
   loadSettings(): Promise<Settings>
   saveSettings(settings: Settings): Promise<void>

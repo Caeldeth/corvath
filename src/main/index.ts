@@ -3,7 +3,7 @@ import { join, extname } from 'path'
 import { readFile } from 'fs/promises'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { createStores } from './store'
-import type { Deck, Reading, Settings } from '../shared/types'
+import type { Deck, Layout, Reading, Settings } from '../shared/types'
 
 // Roaming settings + readings + decks live in %APPDATA%/Themisco/Corvath; the
 // disposable cache (userData) goes in %LOCALAPPDATA%/Themisco/Corvath. Electron
@@ -97,7 +97,9 @@ app.whenReady().then(async () => {
 
   protocol.handle('corvath-asset', handleAssetRequest)
 
-  await store.ensureDecksSeeded(new Date().toISOString())
+  const seededAt = new Date().toISOString()
+  await store.ensureDecksSeeded(seededAt)
+  await store.ensureLayoutsSeeded(seededAt)
 
   // Readings + settings persistence
   ipcMain.handle('readings:getAll', () => store.loadReadings())
@@ -114,6 +116,10 @@ app.whenReady().then(async () => {
       filename: await store.saveCardImage(deckId, cardId, ext, data)
     })
   )
+
+  // Layouts persistence
+  ipcMain.handle('layouts:getAll', () => store.loadLayouts())
+  ipcMain.handle('layouts:save', (_e, layouts: Layout[]) => store.saveLayouts(layouts))
 
   // Window controls (custom frameless title bar)
   ipcMain.on('window:minimize', (e) => BrowserWindow.fromWebContents(e.sender)?.minimize())

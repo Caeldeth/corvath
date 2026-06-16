@@ -1,8 +1,9 @@
 import { promises as fs } from 'fs'
 import { join, resolve } from 'path'
-import type { Deck, Reading, Settings, ThemeName } from '../shared/types'
+import type { Deck, Layout, Reading, Settings, ThemeName } from '../shared/types'
 import { createJsonStore } from './jsonStore'
 import { buildSeedDecks } from './seedDecks'
+import { buildSeedLayouts } from './seedLayouts'
 
 const THEME_NAMES: ThemeName[] = ['hybrasyl', 'danaan', 'chadul', 'grinneal']
 const DEFAULT_SETTINGS: Settings = { theme: 'hybrasyl' }
@@ -20,6 +21,13 @@ interface DecksFile {
   decks: Deck[]
 }
 const DEFAULT_DECKS_FILE: DecksFile = { version: DECKS_VERSION, decks: [] }
+
+const LAYOUTS_VERSION = 1
+interface LayoutsFile {
+  version: number
+  layouts: Layout[]
+}
+const DEFAULT_LAYOUTS_FILE: LayoutsFile = { version: LAYOUTS_VERSION, layouts: [] }
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object'
@@ -39,6 +47,10 @@ export interface Stores {
   saveDecks(decks: Deck[]): Promise<void>
   /** Seed the built-in decks on first run (when no decks file exists yet). */
   ensureDecksSeeded(now: string): Promise<void>
+  loadLayouts(): Promise<Layout[]>
+  saveLayouts(layouts: Layout[]): Promise<void>
+  /** Seed the built-in layouts on first run (when no layouts file exists yet). */
+  ensureLayoutsSeeded(now: string): Promise<void>
   /** Copy raw image bytes into <dir>/decks/<deckId>/, replacing any prior image for the card. */
   saveCardImage(deckId: string, cardId: string, ext: string, data: Uint8Array): Promise<string>
   /** Absolute path to a stored deck image, or null if it escapes the data dir. */
@@ -89,6 +101,16 @@ export function createStores(dir: string): Stores {
     }
   })
 
+  const layouts = createJsonStore<LayoutsFile>({
+    dir,
+    filename: 'layouts.json',
+    defaults: DEFAULT_LAYOUTS_FILE,
+    normalize: (data) => {
+      if (!isObject(data) || !Array.isArray(data.layouts)) return null
+      return { version: LAYOUTS_VERSION, layouts: data.layouts as Layout[] }
+    }
+  })
+
   async function saveCardImage(
     deckId: string,
     cardId: string,
@@ -135,6 +157,12 @@ export function createStores(dir: string): Stores {
     ensureDecksSeeded: async (now) => {
       if (await decks.exists()) return
       await decks.save({ version: DECKS_VERSION, decks: buildSeedDecks(now) })
+    },
+    loadLayouts: () => layouts.load().then((file) => file.layouts),
+    saveLayouts: (value) => layouts.save({ version: LAYOUTS_VERSION, layouts: value }),
+    ensureLayoutsSeeded: async (now) => {
+      if (await layouts.exists()) return
+      await layouts.save({ version: LAYOUTS_VERSION, layouts: buildSeedLayouts(now) })
     },
     saveCardImage,
     resolveImagePath
