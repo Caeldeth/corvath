@@ -167,14 +167,24 @@ export function createStores(dir: string, bundledDecksDir: string): Stores {
         await decks.save({ version: DECKS_VERSION, decks: seeds })
         return
       }
-      // Merge in any built-in decks the user doesn't have yet (e.g. new ones
-      // added in an update), preserving existing decks and edits.
-      const current = (await decks.load()).decks
-      const have = new Set(current.map((d) => d.id))
-      const missing = seeds.filter((s) => !have.has(s.id))
-      if (missing.length) {
-        await decks.save({ version: DECKS_VERSION, decks: [...current, ...missing] })
+      // Merge built-ins: add any the user is missing, and replace an existing
+      // built-in when its seed has a newer seedVersion (a content update).
+      // User-created decks and customized decks at the current version are
+      // left untouched.
+      const next = [...(await decks.load()).decks]
+      const indexById = new Map(next.map((d, i) => [d.id, i]))
+      let changed = false
+      for (const seed of seeds) {
+        const i = indexById.get(seed.id)
+        if (i === undefined) {
+          next.push(seed)
+          changed = true
+        } else if (next[i].builtIn && (seed.seedVersion ?? 1) > (next[i].seedVersion ?? 1)) {
+          next[i] = seed
+          changed = true
+        }
       }
+      if (changed) await decks.save({ version: DECKS_VERSION, decks: next })
     },
     loadLayouts: () => layouts.load().then((file) => file.layouts),
     saveLayouts: (value) => layouts.save({ version: LAYOUTS_VERSION, layouts: value }),

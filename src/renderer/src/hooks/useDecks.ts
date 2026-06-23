@@ -14,6 +14,7 @@ export interface UseDecks {
   updateCard: (deckId: string, cardId: string, patch: Partial<DeckCard>) => void
   deleteCard: (deckId: string, cardId: string) => void
   importCardImage: (deckId: string, cardId: string, file: File) => Promise<void>
+  importDeckBack: (deckId: string, file: File) => Promise<void>
 }
 
 function newDeck(): Deck {
@@ -125,6 +126,16 @@ export function useDecks(): UseDecks {
     [updateCard]
   )
 
+  const importDeckBack = useCallback(
+    async (deckId: string, file: File): Promise<void> => {
+      const ext = file.name.split('.').pop() ?? 'png'
+      const bytes = new Uint8Array(await file.arrayBuffer())
+      const { filename } = await window.api.decks.saveImage(deckId, 'back', ext, bytes)
+      updateDeck(deckId, { back: filename })
+    },
+    [updateDeck]
+  )
+
   return {
     decks,
     loaded,
@@ -134,6 +145,7 @@ export function useDecks(): UseDecks {
     addMajor,
     updateCard,
     deleteCard,
-    importCardImage
+    importCardImage,
+    importDeckBack
   }
 }

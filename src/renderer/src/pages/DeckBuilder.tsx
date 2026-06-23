@@ -9,7 +9,18 @@ interface DeckBuilderProps {
 }
 
 export default function DeckBuilder({ api }: DeckBuilderProps) {
-  const { decks, loaded, createDeck, updateDeck, deleteDeck, addMajor, updateCard, deleteCard, importCardImage } = api
+  const {
+    decks,
+    loaded,
+    createDeck,
+    updateDeck,
+    deleteDeck,
+    addMajor,
+    updateCard,
+    deleteCard,
+    importCardImage,
+    importDeckBack
+  } = api
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
   // Keep selection valid; default to the first deck once loaded.
@@ -47,6 +58,7 @@ export default function DeckBuilder({ api }: DeckBuilderProps) {
           onUpdateCard={(cardId, patch) => updateCard(selected.id, cardId, patch)}
           onDeleteCard={(cardId) => deleteCard(selected.id, cardId)}
           onImportImage={(cardId, file) => void importCardImage(selected.id, cardId, file)}
+          onImportBack={(file) => void importDeckBack(selected.id, file)}
         />
       ) : (
         <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

@@ -86,25 +86,35 @@ function slug(value: string): string {
 }
 
 function buildMajors(names: string[], withImages = false): DeckCard[] {
-  return names.map((name, number) => ({
-    id: `maj-${number}`,
-    section: 'major' as const,
-    name,
-    number,
-    ...(withImages ? { image: `maj-${number}.png` } : {})
-  }))
+  return names.map((name, number) => {
+    const id = `maj-${number}`
+    return {
+      id,
+      section: 'major' as const,
+      name,
+      number,
+      ...(withImages ? { image: `${id}.webp` } : {})
+    }
+  })
 }
 
-function buildMinors(suits: string[], pipRanks: string[], courtRanks: string[]): DeckCard[] {
+function buildMinors(
+  suits: string[],
+  pipRanks: string[],
+  courtRanks: string[],
+  withImages = false
+): DeckCard[] {
   const cards: DeckCard[] = []
   for (const suit of suits) {
     for (const rank of [...pipRanks, ...courtRanks]) {
+      const id = `${slug(suit)}-${slug(rank)}`
       cards.push({
-        id: `${slug(suit)}-${slug(rank)}`,
+        id,
         section: 'minor',
         name: `${rank} of ${suit}`,
         suit,
-        rank
+        rank,
+        ...(withImages ? { image: `${id}.webp` } : {})
       })
     }
   }
@@ -120,8 +130,12 @@ interface DeckSpec {
   courtRanks: string[]
   supportsReversed: boolean
   majors: string[]
-  /** Seed bundled major-arcana art (maj-<n>.png) for this deck. */
-  majorImages?: boolean
+  /** Seed bundled art (<cardId>.webp) for every card in this deck. */
+  bundledImages?: boolean
+  /** Card-back image filename in the deck's bundled folder. */
+  back?: string
+  /** Bump to push an updated built-in over an older copy on startup. */
+  seedVersion?: number
 }
 
 const SPECS: DeckSpec[] = [
@@ -148,13 +162,17 @@ const SPECS: DeckSpec[] = [
   {
     id: 'empyrean',
     name: 'Empyrean',
-    description: 'An original, Thoth-adjacent deck. Major arcana art included.',
+    description: 'An original, Thoth-adjacent deck with full art and custom court ranks.',
     suits: ['Wands', 'Cups', 'Swords', 'Disks'],
     pipRanks: PIPS,
-    courtRanks: ['Knight', 'Queen', 'Prince', 'Princess'],
+    // Custom court ranks (Thoth equivalents): Guardian=Knight, Muse=Queen,
+    // Seeker=Prince, Beloved=Princess.
+    courtRanks: ['Guardian', 'Muse', 'Seeker', 'Beloved'],
     supportsReversed: false,
     majors: EMPYREAN_MAJORS,
-    majorImages: true
+    bundledImages: true,
+    back: 'back.webp',
+    seedVersion: 2
   },
   {
     id: 'hybrasyl',
@@ -179,9 +197,11 @@ export function buildSeedDecks(now: string): Deck[] {
     pipRanks: spec.pipRanks,
     courtRanks: spec.courtRanks,
     supportsReversed: spec.supportsReversed,
+    back: spec.back,
+    seedVersion: spec.seedVersion ?? 1,
     cards: [
-      ...buildMajors(spec.majors, spec.majorImages),
-      ...buildMinors(spec.suits, spec.pipRanks, spec.courtRanks)
+      ...buildMajors(spec.majors, spec.bundledImages),
+      ...buildMinors(spec.suits, spec.pipRanks, spec.courtRanks, spec.bundledImages)
     ],
     createdAt: now,
     updatedAt: now

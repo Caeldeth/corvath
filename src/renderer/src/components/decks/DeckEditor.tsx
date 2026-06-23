@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import {
   Box,
   Button,
@@ -10,6 +10,7 @@ import {
   Typography
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
+import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined'
 import type { Deck, DeckCard } from '../../../../shared/types'
 import { majorsOf, minorsBySuit } from '../../lib/deck'
 import LinesEditor from './LinesEditor'
@@ -23,6 +24,7 @@ interface DeckEditorProps {
   onUpdateCard: (cardId: string, patch: Partial<DeckCard>) => void
   onDeleteCard: (cardId: string) => void
   onImportImage: (cardId: string, file: File) => void
+  onImportBack: (file: File) => void
 }
 
 const gridSx = { display: 'flex', flexWrap: 'wrap', gap: 1.5 } as const
@@ -33,9 +35,14 @@ export default function DeckEditor({
   onAddMajor,
   onUpdateCard,
   onDeleteCard,
-  onImportImage
+  onImportImage,
+  onImportBack
 }: DeckEditorProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const backFileRef = useRef<HTMLInputElement>(null)
+  const backSrc = deck.back
+    ? `${window.api.decks.imageUrl(deck.id, deck.back)}?v=${encodeURIComponent(deck.updatedAt)}`
+    : null
   const selected = deck.cards.find((c) => c.id === selectedId) ?? null
   const majors = majorsOf(deck)
   const suits = minorsBySuit(deck)
@@ -65,6 +72,60 @@ export default function DeckEditor({
           }
           label="Supports reversed cards"
         />
+
+        <Divider>Card back</Divider>
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+          <Box
+            sx={{
+              width: 96,
+              height: 150,
+              flexShrink: 0,
+              border: 1,
+              borderColor: 'divider',
+              borderRadius: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              overflow: 'hidden',
+              bgcolor: 'background.default'
+            }}
+          >
+            {backSrc ? (
+              <img
+                src={backSrc}
+                alt="Card back"
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            ) : (
+              <ImageOutlinedIcon sx={{ opacity: 0.4 }} />
+            )}
+          </Box>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button
+              size="small"
+              startIcon={<ImageOutlinedIcon />}
+              onClick={() => backFileRef.current?.click()}
+            >
+              {deck.back ? 'Replace back' : 'Set card back'}
+            </Button>
+            {deck.back && (
+              <Button size="small" color="inherit" onClick={() => onUpdateDeck({ back: undefined })}>
+                Remove
+              </Button>
+            )}
+          </Box>
+          <input
+            ref={backFileRef}
+            type="file"
+            accept="image/*"
+            hidden
+            onChange={(e) => {
+              const file = e.target.files?.[0]
+              if (file) onImportBack(file)
+              e.target.value = ''
+            }}
+          />
+        </Box>
 
         <Divider>Structure</Divider>
         <Typography variant="caption" sx={{ opacity: 0.7, mt: -1 }}>

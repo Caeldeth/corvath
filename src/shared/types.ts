@@ -106,12 +106,16 @@ export interface Deck {
   id: string
   name: string
   description?: string
-  /** True for seeded decks (Thoth/RWS/Hybrasyl); still fully editable. */
+  /** True for seeded decks (Thoth/RWS/Empyrean/Hybrasyl); still fully editable. */
   builtIn?: boolean
+  /** Seed revision; a higher value replaces an older built-in copy on startup. */
+  seedVersion?: number
   suits: string[]
   pipRanks: string[]
   courtRanks: string[]
   supportsReversed: boolean
+  /** Optional card-back image filename (served like card images). */
+  back?: string
   cards: DeckCard[]
   createdAt: string
   updatedAt: string

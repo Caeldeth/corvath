@@ -9,11 +9,13 @@ bringing in readings authored elsewhere.
 
 A **deck builder** (Decks tab) defines the decks: structure-agnostic, so it handles standard
 decks (Thoth, Rider-Waite-Smith — both seeded), the **Empyrean** deck (an original
-Thoth-adjacent deck that ships with its major-arcana art under `bundled/decks/empyrean/`), and
-custom ones like the Hybrasyl deck with an arbitrary number of major arcana and custom
-suit/court names. Each card can hold meanings, keywords, and an imported image (bundled art is
-served read-only and overridden by any image you import). The recorder's deck field offers the
-builder's deck names.
+Thoth-adjacent deck with custom court ranks that ships with full 78-card WebP art plus a card
+back under `bundled/decks/empyrean/`), and custom ones like the Hybrasyl deck with an arbitrary
+number of major arcana and custom suit/court names. Each card can hold meanings, keywords, and
+an imported image, and a deck can have a card back (bundled art is served read-only and
+overridden by any image you import). Built-in decks carry a `seedVersion`, so a shipped deck
+update replaces the older copy on startup without disturbing your own decks. The recorder's
+deck field offers the builder's deck names.
 
 A **layout builder** (Layouts tab) defines spreads on a visual board: drag positions to
 arrange them, name each slot, and mark crossing cards. Single Card, Three Card, Celtic Cross,
