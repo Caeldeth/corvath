@@ -85,7 +85,7 @@ function slug(value: string): string {
     .replace(/^-+|-+$/g, '')
 }
 
-function buildMajors(names: string[], withImages = false): DeckCard[] {
+function buildMajors(names: string[], imageExt?: string): DeckCard[] {
   return names.map((name, number) => {
     const id = `maj-${number}`
     return {
@@ -93,7 +93,7 @@ function buildMajors(names: string[], withImages = false): DeckCard[] {
       section: 'major' as const,
       name,
       number,
-      ...(withImages ? { image: `${id}.webp` } : {})
+      ...(imageExt ? { image: `${id}.${imageExt}` } : {})
     }
   })
 }
@@ -102,7 +102,7 @@ function buildMinors(
   suits: string[],
   pipRanks: string[],
   courtRanks: string[],
-  withImages = false
+  imageExt?: string
 ): DeckCard[] {
   const cards: DeckCard[] = []
   for (const suit of suits) {
@@ -114,7 +114,7 @@ function buildMinors(
         name: `${rank} of ${suit}`,
         suit,
         rank,
-        ...(withImages ? { image: `${id}.webp` } : {})
+        ...(imageExt ? { image: `${id}.${imageExt}` } : {})
       })
     }
   }
@@ -130,8 +130,8 @@ interface DeckSpec {
   courtRanks: string[]
   supportsReversed: boolean
   majors: string[]
-  /** Seed bundled art (<cardId>.webp) for every card in this deck. */
-  bundledImages?: boolean
+  /** When set, seed bundled art (<cardId>.<ext>) for every card in this deck. */
+  imageExt?: string
   /** Card-back image filename in the deck's bundled folder. */
   back?: string
   /** Bump to push an updated built-in over an older copy on startup. */
@@ -152,12 +152,15 @@ const SPECS: DeckSpec[] = [
   {
     id: 'rws',
     name: 'Rider-Waite-Smith',
-    description: 'Standard Rider–Waite–Smith deck. 78 cards.',
+    description: 'Standard Rider–Waite–Smith deck (public-domain art). 78 cards.',
     suits: ['Wands', 'Cups', 'Swords', 'Pentacles'],
     pipRanks: PIPS,
     courtRanks: ['Page', 'Knight', 'Queen', 'King'],
     supportsReversed: true,
-    majors: RWS_MAJORS
+    majors: RWS_MAJORS,
+    imageExt: 'jpg',
+    back: 'back.png',
+    seedVersion: 2
   },
   {
     id: 'empyrean',
@@ -170,7 +173,7 @@ const SPECS: DeckSpec[] = [
     courtRanks: ['Guardian', 'Muse', 'Seeker', 'Beloved'],
     supportsReversed: false,
     majors: EMPYREAN_MAJORS,
-    bundledImages: true,
+    imageExt: 'webp',
     back: 'back.webp',
     seedVersion: 2
   },
@@ -200,8 +203,8 @@ export function buildSeedDecks(now: string): Deck[] {
     back: spec.back,
     seedVersion: spec.seedVersion ?? 1,
     cards: [
-      ...buildMajors(spec.majors, spec.bundledImages),
-      ...buildMinors(spec.suits, spec.pipRanks, spec.courtRanks, spec.bundledImages)
+      ...buildMajors(spec.majors, spec.imageExt),
+      ...buildMinors(spec.suits, spec.pipRanks, spec.courtRanks, spec.imageExt)
     ],
     createdAt: now,
     updatedAt: now
