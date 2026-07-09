@@ -157,5 +157,7 @@ export interface TarotApi {
   }
   loadSettings(): Promise<Settings>
   saveSettings(settings: Settings): Promise<void>
+  /** Signal the main process that the renderer has hydrated; reveals the window. */
+  appReady(): void
   window: WindowControls
 }

@@ -26,6 +26,7 @@ const api: TarotApi = {
   loadSettings: (): Promise<Settings> => ipcRenderer.invoke('settings:load'),
   saveSettings: (settings: Settings): Promise<void> =>
     ipcRenderer.invoke('settings:save', settings),
+  appReady: (): void => ipcRenderer.send('app:ready'),
   window: {
     minimize: (): void => ipcRenderer.send('window:minimize'),
     toggleMaximize: (): void => ipcRenderer.send('window:toggleMaximize'),

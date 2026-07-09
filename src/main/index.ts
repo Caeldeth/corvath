@@ -3,6 +3,7 @@ import { join, extname } from 'path'
 import { readFile } from 'fs/promises'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { createStores } from './store'
+import { createSplashWindow } from './splash'
 import type { Deck, Layout, Reading, Settings } from '../shared/types'
 
 // Roaming settings + readings + decks live in %APPDATA%/Themisco/Corvath; the
@@ -61,8 +62,25 @@ async function handleAssetRequest(request: Request): Promise<Response> {
   return new Response('Not found', { status: 404 })
 }
 
+let mainWindow: BrowserWindow | null = null
+let splashWindow: BrowserWindow | null = null
+
+// Reveal the main window and dismiss the splash. Called once the renderer
+// signals `app:ready` (first painted frame is already in the persisted theme),
+// with a timeout backstop so a renderer failure can't leave the window hidden.
+// Idempotent — the backstop and the IPC signal may both fire.
+function revealMainWindow(): void {
+  if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
+    mainWindow.show()
+  }
+  if (splashWindow && !splashWindow.isDestroyed()) {
+    splashWindow.close()
+  }
+  splashWindow = null
+}
+
 function createWindow(): void {
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
     minWidth: 940,
@@ -77,13 +95,9 @@ function createWindow(): void {
     }
   })
 
-  mainWindow.on('ready-to-show', () => {
-    mainWindow.show()
-  })
-
   // Keep the renderer's maximize/restore icon in sync with the actual state.
-  mainWindow.on('maximize', () => mainWindow.webContents.send('window:maximizeChange', true))
-  mainWindow.on('unmaximize', () => mainWindow.webContents.send('window:maximizeChange', false))
+  mainWindow.on('maximize', () => mainWindow?.webContents.send('window:maximizeChange', true))
+  mainWindow.on('unmaximize', () => mainWindow?.webContents.send('window:maximizeChange', false))
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
@@ -107,6 +121,10 @@ app.whenReady().then(async () => {
   })
 
   protocol.handle('corvath-asset', handleAssetRequest)
+
+  // Show the splash immediately, before the (awaited) seed work and window load,
+  // so the user gets instant feedback.
+  splashWindow = createSplashWindow()
 
   const seededAt = new Date().toISOString()
   await store.ensureDecksSeeded(seededAt)
@@ -145,6 +163,11 @@ app.whenReady().then(async () => {
     'window:isMaximized',
     (e) => BrowserWindow.fromWebContents(e.sender)?.isMaximized() ?? false
   )
+
+  // Reveal the window once the renderer has hydrated (its first frame is already
+  // themed), with a 15 s backstop in case that signal never arrives.
+  ipcMain.once('app:ready', revealMainWindow)
+  setTimeout(revealMainWindow, 15000)
 
   createWindow()
 
