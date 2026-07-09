@@ -1,0 +1,126 @@
+import { create } from 'zustand'
+import type { Deck, DeckCard } from '../../../shared/types'
+import { nowIso, rebuildMinors, renumberMajors, uid } from '../lib/deck'
+import { createDebouncedSaver } from './persist'
+
+const STRUCTURAL_KEYS: (keyof Deck)[] = ['suits', 'pipRanks', 'courtRanks']
+
+function newDeck(): Deck {
+  return {
+    id: uid(),
+    name: 'New Deck',
+    description: '',
+    suits: [],
+    pipRanks: ['Ace', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten'],
+    courtRanks: ['Page', 'Knight', 'Queen', 'King'],
+    supportsReversed: true,
+    cards: [],
+    createdAt: nowIso(),
+    updatedAt: nowIso()
+  }
+}
+
+interface DecksState {
+  decks: Deck[]
+  hydrated: boolean
+  hydrate: () => Promise<void>
+  createDeck: () => Deck
+  updateDeck: (id: string, patch: Partial<Deck>) => void
+  deleteDeck: (id: string) => void
+  addMajor: (deckId: string) => void
+  updateCard: (deckId: string, cardId: string, patch: Partial<DeckCard>) => void
+  deleteCard: (deckId: string, cardId: string) => void
+  importCardImage: (deckId: string, cardId: string, file: File) => Promise<void>
+  importDeckBack: (deckId: string, file: File) => Promise<void>
+}
+
+let suppressNextSave = false
+
+export const useDecksStore = create<DecksState>((set, get) => {
+  // Structural mutations stamp updatedAt, matching the prior useDecks `mutate`.
+  const mutate = (id: string, fn: (deck: Deck) => Deck): void =>
+    set((s) => ({
+      decks: s.decks.map((deck) => (deck.id === id ? { ...fn(deck), updatedAt: nowIso() } : deck))
+    }))
+
+  return {
+    decks: [],
+    hydrated: false,
+
+    hydrate: async () => {
+      if (get().hydrated) return
+      const decks = await window.api.decks.getAll()
+      suppressNextSave = true
+      set({ decks, hydrated: true })
+    },
+
+    createDeck: () => {
+      const deck = newDeck()
+      set((s) => ({ decks: [...s.decks, deck] }))
+      return deck
+    },
+
+    updateDeck: (id, patch) =>
+      mutate(id, (deck) => {
+        const next = { ...deck, ...patch }
+        // If the structure changed, regenerate minor cards (preserving data).
+        if (STRUCTURAL_KEYS.some((key) => key in patch)) {
+          const majors = next.cards.filter((c) => c.section === 'major')
+          next.cards = [...majors, ...rebuildMinors(next)]
+        }
+        return next
+      }),
+
+    deleteDeck: (id) => set((s) => ({ decks: s.decks.filter((deck) => deck.id !== id) })),
+
+    addMajor: (deckId) =>
+      mutate(deckId, (deck) => {
+        const major: DeckCard = { id: uid(), section: 'major', name: 'New Card' }
+        const majors = renumberMajors([...deck.cards.filter((c) => c.section === 'major'), major])
+        const minors = deck.cards.filter((c) => c.section === 'minor')
+        return { ...deck, cards: [...majors, ...minors] }
+      }),
+
+    updateCard: (deckId, cardId, patch) =>
+      mutate(deckId, (deck) => ({
+        ...deck,
+        cards: deck.cards.map((c) => (c.id === cardId ? { ...c, ...patch } : c))
+      })),
+
+    deleteCard: (deckId, cardId) =>
+      mutate(deckId, (deck) => {
+        const cards = deck.cards.filter((c) => c.id !== cardId)
+        return { ...deck, cards: renumberMajors(cards) }
+      }),
+
+    importCardImage: async (deckId, cardId, file) => {
+      const ext = file.name.split('.').pop() ?? 'png'
+      const bytes = new Uint8Array(await file.arrayBuffer())
+      const { filename } = await window.api.decks.saveImage(deckId, cardId, ext, bytes)
+      get().updateCard(deckId, cardId, { image: filename })
+    },
+
+    importDeckBack: async (deckId, file) => {
+      const ext = file.name.split('.').pop() ?? 'png'
+      const bytes = new Uint8Array(await file.arrayBuffer())
+      const { filename } = await window.api.decks.saveImage(deckId, 'back', ext, bytes)
+      get().updateDeck(deckId, { back: filename })
+    }
+  }
+})
+
+const saver = createDebouncedSaver(() => {
+  if (typeof window === 'undefined' || !window.api?.decks) return
+  window.api.decks
+    .save(useDecksStore.getState().decks)
+    .catch((err) => console.error('[decks] save failed:', err))
+})
+
+useDecksStore.subscribe((state) => {
+  if (!state.hydrated) return
+  if (suppressNextSave) {
+    suppressNextSave = false
+    return
+  }
+  saver.schedule()
+})

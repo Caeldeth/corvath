@@ -27,7 +27,8 @@
     "@fontsource/cinzel-decorative": "^5.2.8",
     "@fontsource/crimson-pro": "^5.2.8",
     "@mui/icons-material": "^7.3.9",
-    "@mui/material": "^7.3.9"
+    "@mui/material": "^7.3.9",
+    "zustand": "^5.0.14"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config-prettier": "^3.0.0",

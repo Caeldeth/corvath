@@ -2,6 +2,10 @@ import { useEffect, useState } from 'react'
 import { Box, CssBaseline, ThemeProvider } from '@mui/material'
 import type { ThemeName } from '../../shared/types'
 import { hybrasylTheme, themes } from './themes'
+import { useSettingsStore } from './store/settingsStore'
+import { useReadingsStore } from './store/readingsStore'
+import { useDecksStore } from './store/decksStore'
+import { useLayoutsStore } from './store/layoutsStore'
 import { useDecks } from './hooks/useDecks'
 import { useLayouts } from './hooks/useLayouts'
 import TitleBar from './components/TitleBar'
@@ -11,20 +15,22 @@ import DeckBuilder from './pages/DeckBuilder'
 import Layouts from './pages/Layouts'
 
 function App(): React.JSX.Element {
-  const [themeName, setThemeName] = useState<ThemeName>('hybrasyl')
+  const themeName = useSettingsStore((s) => s.theme)
+  const setTheme = useSettingsStore((s) => s.setTheme)
   const [view, setView] = useState<View>('readings')
   const decksApi = useDecks()
   const layoutsApi = useLayouts()
 
-  // Load the persisted theme once on mount.
+  // Hydrate every store once at startup, so pages no longer reload from disk
+  // when they remount on a tab switch.
   useEffect(() => {
-    window.api.loadSettings().then((s) => setThemeName(s.theme ?? 'hybrasyl'))
+    void useSettingsStore.getState().hydrate()
+    void useReadingsStore.getState().hydrate()
+    void useDecksStore.getState().hydrate()
+    void useLayoutsStore.getState().hydrate()
   }, [])
 
-  const changeTheme = (name: ThemeName): void => {
-    setThemeName(name)
-    void window.api.saveSettings({ theme: name })
-  }
+  const changeTheme = (name: ThemeName): void => setTheme(name)
 
   const theme = themes[themeName] ?? hybrasylTheme
 
