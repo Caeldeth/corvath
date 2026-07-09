@@ -75,11 +75,25 @@ Decided: **both draw modes**, and **layout-or-free-N-card**.
       images, and adds the deck. Pure `deckPackage.ts` (pack/unpack) + `store.readDeckImages`/
       `writeDeckImages` (path-safe via `resolveWithin`), `dialog` injected into handlers to keep
       them test-friendly. UI: Import button + per-deck Export icon + result snackbar. 11 new tests.
-- [ ] **Build targets** — win-only vs. also portable + mac dmg (template ships both).
-      Signing/notarization: decide explicitly (likely skip for personal app).
-- [ ] **Auto-update** — electron-updater, or intentionally out of scope for 1.0.
-- [ ] **First-run onboarding / empty states** — more important once "draw a reading" is the hook.
-- [ ] **Export a reading** — image or JSON (import already exists; export doesn't).
+- [x] **Build targets** — DECIDED: **Windows portable only** for 1.0. `electron-builder.yml`
+      win target switched `nsis` → `portable` (`${name}-${version}-portable.${ext}`); the nsis
+      block is left in place, commented, so nsis/mac/linux can be re-enabled later by adding
+      target entries. Signing/notarization skipped (personal app).
+- [x] **Auto-update** — DECIDED: **notification only** (no electron-updater/auto-download).
+      `src/main/updateCheck.ts` queries the GitHub `releases/latest` API on launch, compares the
+      tag to `app.getVersion()` (pure `isNewerVersion`, unit-tested), and — for a newer stable
+      release — sends `update:available` to the renderer after `did-finish-load`. Best-effort:
+      offline/rate-limit/no-releases all no-op. `App.tsx` shows an info Snackbar with a "View"
+      button that opens the release page. Preload adds `onUpdateAvailable(cb)`.
+- [x] **First-run onboarding / empty states** — light polish on the Readings hook: empty
+      reading list shows a "Draw a Reading" CTA; the empty right pane shows a "Welcome to
+      Corvath" state (Draw CTA) when there are zero readings, else the select prompt.
+- [x] **Export a reading** — DECIDED: **JSON, round-trippable**. `lib/exportReadings.ts` maps a
+      `Reading` back to the exact shape `parseReadingsImport` accepts (drops ids/timestamps/
+      seed/drawMode/positionId; layout by name; entries map to positions by order). Per-reading
+      Export icon + "Export all" button in `ReadingList`; `readings:export` handler shows a save
+      dialog and writes the JSON (main only picks the path + writes — mapping/validation live in
+      the renderer). Result Snackbar. Round-trip unit-tested (export → import equivalence).
 
 ## Ordering
 

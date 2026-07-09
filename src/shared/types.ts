@@ -171,11 +171,31 @@ export interface DeckImportResult {
   error?: string
 }
 
+/** Result of exporting one or more readings to a `.json` file. */
+export interface ReadingExportResult {
+  ok?: boolean
+  /** User dismissed the save dialog. */
+  canceled?: boolean
+  /** Path written to, on success. */
+  path?: string
+  error?: string
+}
+
+/** A newer release advertised to the renderer (notification only — no auto-download). */
+export interface UpdateInfo {
+  /** Version of the latest release (tag without a leading `v`). */
+  version: string
+  /** Release page to open in the browser. */
+  url: string
+}
+
 /** The surface exposed to the renderer on `window.api`. */
 export interface TarotApi {
   readings: {
     getAll(): Promise<Reading[]>
     save(readings: Reading[]): Promise<void>
+    /** Prompt for a destination and write the given JSON (one or more readings). */
+    export(defaultName: string, json: string): Promise<ReadingExportResult>
   }
   decks: {
     getAll(): Promise<Deck[]>
@@ -202,5 +222,7 @@ export interface TarotApi {
   saveSettings(settings: Settings): Promise<void>
   /** Signal the main process that the renderer has hydrated; reveals the window. */
   appReady(): void
+  /** Subscribe to an available-update notification; returns an unsubscribe function. */
+  onUpdateAvailable(callback: (info: UpdateInfo) => void): () => void
   window: WindowControls
 }

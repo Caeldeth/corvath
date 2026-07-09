@@ -6,15 +6,19 @@ import type {
   DeckImportResult,
   Layout,
   Reading,
+  ReadingExportResult,
   SavedImage,
   Settings,
-  TarotApi
+  TarotApi,
+  UpdateInfo
 } from '../shared/types'
 
 const api: TarotApi = {
   readings: {
     getAll: (): Promise<Reading[]> => ipcRenderer.invoke('readings:getAll'),
-    save: (readings: Reading[]): Promise<void> => ipcRenderer.invoke('readings:save', readings)
+    save: (readings: Reading[]): Promise<void> => ipcRenderer.invoke('readings:save', readings),
+    export: (defaultName: string, json: string): Promise<ReadingExportResult> =>
+      ipcRenderer.invoke('readings:export', defaultName, json)
   },
   decks: {
     getAll: (): Promise<Deck[]> => ipcRenderer.invoke('decks:getAll'),
@@ -44,6 +48,11 @@ const api: TarotApi = {
   saveSettings: (settings: Settings): Promise<void> =>
     ipcRenderer.invoke('settings:save', settings),
   appReady: (): void => ipcRenderer.send('app:ready'),
+  onUpdateAvailable: (callback: (info: UpdateInfo) => void): (() => void) => {
+    const listener = (_e: IpcRendererEvent, info: UpdateInfo): void => callback(info)
+    ipcRenderer.on('update:available', listener)
+    return () => ipcRenderer.removeListener('update:available', listener)
+  },
   window: {
     minimize: (): void => ipcRenderer.send('window:minimize'),
     toggleMaximize: (): void => ipcRenderer.send('window:toggleMaximize'),

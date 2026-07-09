@@ -7,6 +7,7 @@ import icon from '../../resources/corvath.png?asset'
 import { createStores } from './store'
 import { createSplashWindow } from './splash'
 import { registerHandlers } from './handlers'
+import { checkForUpdate } from './updateCheck'
 
 // Roaming settings + readings + decks live in %APPDATA%/Eriscorp/Corvath; the
 // disposable cache (userData) goes in %LOCALAPPDATA%/Eriscorp/Corvath. Electron
@@ -169,6 +170,16 @@ app.whenReady().then(async () => {
   setTimeout(revealMainWindow, 15000)
 
   createWindow()
+
+  // Best-effort update notification. The fetch latency comfortably outlasts the
+  // renderer mount, but gate on load anyway so the message isn't sent into a
+  // page that hasn't registered its listener yet.
+  void checkForUpdate(app.getVersion()).then((info) => {
+    if (!info || !mainWindow || mainWindow.isDestroyed()) return
+    const send = (): void => mainWindow?.webContents.send('update:available', info)
+    if (mainWindow.webContents.isLoading()) mainWindow.webContents.once('did-finish-load', send)
+    else send()
+  })
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

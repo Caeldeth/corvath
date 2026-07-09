@@ -22,6 +22,7 @@ import type {
   DeckImportResult,
   Layout,
   Reading,
+  ReadingExportResult,
   SavedImage,
   Settings
 } from '../shared/types'
@@ -37,6 +38,7 @@ import {
 import { CORVATHDECK_EXT, packDeck, unpackDeck, uniqueDeckName } from './deckPackage'
 
 const DECK_FILTERS = [{ name: 'Corvath Deck', extensions: [CORVATHDECK_EXT] }]
+const JSON_FILTERS = [{ name: 'JSON', extensions: ['json'] }]
 
 export interface HandlerContext {
   store: Stores
@@ -108,6 +110,35 @@ export async function exportDeck(
   }
 }
 
+/**
+ * Prompt for a destination and write pre-serialized readings JSON (built and
+ * validated in the renderer). The main process only chooses the path and writes
+ * bytes, so no schema is needed here.
+ */
+export async function exportReadings(
+  dialog: Dialog,
+  win: BrowserWindowType | null,
+  defaultName: unknown,
+  json: unknown
+): Promise<ReadingExportResult> {
+  const name = z.string().parse(defaultName)
+  const text = z.string().parse(json)
+
+  const safeName = (name || 'readings').replace(/[^a-z0-9._-]+/gi, '_')
+  const opts: SaveDialogOptions = { defaultPath: `${safeName}.json`, filters: JSON_FILTERS }
+  const { canceled, filePath } = win
+    ? await dialog.showSaveDialog(win, opts)
+    : await dialog.showSaveDialog(opts)
+  if (canceled || !filePath) return { canceled: true }
+
+  try {
+    await writeFile(filePath, text, 'utf8')
+    return { ok: true, path: filePath }
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Failed to write the readings file.' }
+  }
+}
+
 /** Prompt for a `.corvathdeck`, then import it as a fresh user deck (new id + unique name). */
 export async function importDeck(
   ctx: HandlerContext,
@@ -159,6 +190,9 @@ export function registerHandlers(
   // Readings + settings persistence
   ipcMain.handle('readings:getAll', () => getReadings(ctx))
   ipcMain.handle('readings:save', (_e, readings) => saveReadings(ctx, readings))
+  ipcMain.handle('readings:export', (e, name, json) =>
+    exportReadings(dialog, BrowserWindow.fromWebContents(e.sender), name, json)
+  )
   ipcMain.handle('settings:load', () => loadSettings(ctx))
   ipcMain.handle('settings:save', (_e, settings) => saveSettings(ctx, settings))
 

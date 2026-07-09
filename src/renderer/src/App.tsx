@@ -1,6 +1,14 @@
 import { useEffect, useState } from 'react'
-import { Box, CircularProgress, CssBaseline, ThemeProvider } from '@mui/material'
-import type { ThemeName } from '../../shared/types'
+import {
+  Alert,
+  Box,
+  Button,
+  CircularProgress,
+  CssBaseline,
+  Snackbar,
+  ThemeProvider
+} from '@mui/material'
+import type { ThemeName, UpdateInfo } from '../../shared/types'
 import { hybrasylTheme, themes } from './themes'
 import { useSettingsStore } from './store/settingsStore'
 import { useReadingsStore } from './store/readingsStore'
@@ -59,6 +67,10 @@ function App(): React.JSX.Element {
   const [selectedReadingId, setSelectedReadingId] = useState<string | null>(null)
   const decksApi = useDecks()
   const layoutsApi = useLayouts()
+  const [update, setUpdate] = useState<UpdateInfo | null>(null)
+
+  // Surface an available-update notification from main (best-effort, once).
+  useEffect(() => window.api.onUpdateAvailable(setUpdate), [])
 
   // Hydrate every store once at startup, so pages no longer reload from disk
   // when they remount on a tab switch. Once settings land (theme is known), tell
@@ -143,6 +155,33 @@ function App(): React.JSX.Element {
         )}
         {view === 'decks' && <DeckBuilder api={decksApi} />}
         {view === 'layouts' && <Layouts api={layoutsApi} />}
+
+        <Snackbar
+          open={!!update}
+          onClose={() => setUpdate(null)}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        >
+          {update ? (
+            <Alert
+              severity="info"
+              variant="filled"
+              onClose={() => setUpdate(null)}
+              action={
+                update.url ? (
+                  <Button
+                    color="inherit"
+                    size="small"
+                    onClick={() => window.open(update.url, '_blank')}
+                  >
+                    View
+                  </Button>
+                ) : undefined
+              }
+            >
+              Corvath {update.version} is available.
+            </Alert>
+          ) : undefined}
+        </Snackbar>
       </Box>
     </ThemeProvider>
   )
