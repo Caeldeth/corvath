@@ -1,6 +1,6 @@
 export type Orientation = 'upright' | 'reversed'
 
-export type ThemeName = 'hybrasyl' | 'danaan' | 'chadul' | 'grinneal'
+export type ThemeName = 'hybrasyl' | 'danaan' | 'chadul' | 'grinneal' | 'mundanes' | 'dubhaimid'
 
 /** A single card / question within a reading. */
 export interface Entry {

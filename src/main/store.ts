@@ -5,7 +5,14 @@ import { createJsonStore } from './jsonStore'
 import { buildSeedDecks } from './seedDecks'
 import { buildSeedLayouts } from './seedLayouts'
 
-const THEME_NAMES: ThemeName[] = ['hybrasyl', 'danaan', 'chadul', 'grinneal']
+const THEME_NAMES: ThemeName[] = [
+  'hybrasyl',
+  'danaan',
+  'chadul',
+  'grinneal',
+  'mundanes',
+  'dubhaimid'
+]
 const DEFAULT_SETTINGS: Settings = { theme: 'hybrasyl' }
 
 const READINGS_VERSION = 1
