@@ -11,7 +11,7 @@ import {
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import FileUploadOutlinedIcon from '@mui/icons-material/FileUploadOutlined'
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import type { Reading } from '../../../shared/types'
 
 interface ReadingListProps {
@@ -91,8 +91,10 @@ export default function ReadingList({
                     secondary={`${reading.date} · ${reading.deck} · ${reading.entries.length} card${
                       reading.entries.length === 1 ? '' : 's'
                     }`}
-                    primaryTypographyProps={{ noWrap: true }}
-                    secondaryTypographyProps={{ noWrap: true, fontSize: '0.7rem' }}
+                    slotProps={{
+                      primary: { noWrap: true },
+                      secondary: { noWrap: true, sx: { fontSize: '0.7rem' } }
+                    }}
                   />
                 </ListItemButton>
               </ListItem>

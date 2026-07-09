@@ -47,10 +47,7 @@ export default function ReadingEditor({
   const handleSelectLayout = (layoutId: string): void => {
     const layout = layouts.find((l) => l.id === layoutId) ?? null
     const hasContent = reading.entries.some((e) => e.topic || e.question || e.card)
-    if (
-      hasContent &&
-      !window.confirm('Applying a layout replaces the current cards. Continue?')
-    ) {
+    if (hasContent && !window.confirm('Applying a layout replaces the current cards. Continue?')) {
       return
     }
     onApplyLayout(layout)
@@ -87,7 +84,7 @@ export default function ReadingEditor({
             type="date"
             value={reading.date}
             onChange={(e) => onChange({ date: e.target.value })}
-            InputLabelProps={{ shrink: true }}
+            slotProps={{ inputLabel: { shrink: true } }}
             sx={{ flex: '1 1 180px' }}
           />
           <Autocomplete

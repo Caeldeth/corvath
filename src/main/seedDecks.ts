@@ -150,6 +150,19 @@ const SPECS: DeckSpec[] = [
     majors: THOTH_MAJORS
   },
   {
+    id: 'argent',
+    name: 'Argent Tarot',
+    description: 'Original-art deck on the Thoth structure. 78 cards; reversals off by default.',
+    suits: ['Wands', 'Cups', 'Swords', 'Disks'],
+    pipRanks: PIPS,
+    courtRanks: ['Knight', 'Queen', 'Prince', 'Princess'],
+    supportsReversed: false,
+    majors: THOTH_MAJORS,
+    imageExt: 'webp',
+    back: 'back.webp',
+    seedVersion: 1
+  },
+  {
     id: 'rws',
     name: 'Rider-Waite-Smith',
     description: 'Standard Rider–Waite–Smith deck (public-domain art). 78 cards.',

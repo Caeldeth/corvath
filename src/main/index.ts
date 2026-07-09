@@ -3,7 +3,8 @@ import { join, extname } from 'path'
 import { readFile } from 'fs/promises'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { createStores } from './store'
-import type { Deck, Layout, Reading, Settings } from '../shared/types'
+import { createSplashWindow } from './splash'
+import { registerHandlers } from './handlers'
 
 // Roaming settings + readings + decks live in %APPDATA%/Themisco/Corvath; the
 // disposable cache (userData) goes in %LOCALAPPDATA%/Themisco/Corvath. Electron
@@ -53,7 +54,11 @@ async function handleAssetRequest(request: Request): Promise<Response> {
     try {
       const data = await readFile(filePath)
       const mime = IMAGE_MIME[extname(filePath).toLowerCase()] ?? 'application/octet-stream'
-      return new Response(new Uint8Array(data), { headers: { 'content-type': mime } })
+      // no-cache: Chromium revalidates instead of hard-caching, so a replaced
+      // image (same URL, unchanged version) still refreshes.
+      return new Response(new Uint8Array(data), {
+        headers: { 'content-type': mime, 'cache-control': 'no-cache' }
+      })
     } catch {
       /* try next candidate */
     }
@@ -61,8 +66,25 @@ async function handleAssetRequest(request: Request): Promise<Response> {
   return new Response('Not found', { status: 404 })
 }
 
+let mainWindow: BrowserWindow | null = null
+let splashWindow: BrowserWindow | null = null
+
+// Reveal the main window and dismiss the splash. Called once the renderer
+// signals `app:ready` (first painted frame is already in the persisted theme),
+// with a timeout backstop so a renderer failure can't leave the window hidden.
+// Idempotent — the backstop and the IPC signal may both fire.
+function revealMainWindow(): void {
+  if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
+    mainWindow.show()
+  }
+  if (splashWindow && !splashWindow.isDestroyed()) {
+    splashWindow.close()
+  }
+  splashWindow = null
+}
+
 function createWindow(): void {
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
     minWidth: 940,
@@ -77,13 +99,9 @@ function createWindow(): void {
     }
   })
 
-  mainWindow.on('ready-to-show', () => {
-    mainWindow.show()
-  })
-
   // Keep the renderer's maximize/restore icon in sync with the actual state.
-  mainWindow.on('maximize', () => mainWindow.webContents.send('window:maximizeChange', true))
-  mainWindow.on('unmaximize', () => mainWindow.webContents.send('window:maximizeChange', false))
+  mainWindow.on('maximize', () => mainWindow?.webContents.send('window:maximizeChange', true))
+  mainWindow.on('unmaximize', () => mainWindow?.webContents.send('window:maximizeChange', false))
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
@@ -108,43 +126,19 @@ app.whenReady().then(async () => {
 
   protocol.handle('corvath-asset', handleAssetRequest)
 
+  // Show the splash immediately, before the (awaited) seed work and window load,
+  // so the user gets instant feedback.
+  splashWindow = createSplashWindow()
+
   const seededAt = new Date().toISOString()
   await store.ensureDecksSeeded(seededAt)
   await store.ensureLayoutsSeeded(seededAt)
 
-  // Readings + settings persistence
-  ipcMain.handle('readings:getAll', () => store.loadReadings())
-  ipcMain.handle('readings:save', (_e, readings: Reading[]) => store.saveReadings(readings))
-  ipcMain.handle('settings:load', () => store.loadSettings())
-  ipcMain.handle('settings:save', (_e, settings: Settings) => store.saveSettings(settings))
-
-  // Decks persistence + image import
-  ipcMain.handle('decks:getAll', () => store.loadDecks())
-  ipcMain.handle('decks:save', (_e, decks: Deck[]) => store.saveDecks(decks))
-  ipcMain.handle(
-    'decks:saveImage',
-    async (_e, deckId: string, cardId: string, ext: string, data: Uint8Array) => ({
-      filename: await store.saveCardImage(deckId, cardId, ext, data)
-    })
-  )
-
-  // Layouts persistence
-  ipcMain.handle('layouts:getAll', () => store.loadLayouts())
-  ipcMain.handle('layouts:save', (_e, layouts: Layout[]) => store.saveLayouts(layouts))
-
-  // Window controls (custom frameless title bar)
-  ipcMain.on('window:minimize', (e) => BrowserWindow.fromWebContents(e.sender)?.minimize())
-  ipcMain.on('window:toggleMaximize', (e) => {
-    const win = BrowserWindow.fromWebContents(e.sender)
-    if (!win) return
-    if (win.isMaximized()) win.unmaximize()
-    else win.maximize()
-  })
-  ipcMain.on('window:close', (e) => BrowserWindow.fromWebContents(e.sender)?.close())
-  ipcMain.handle(
-    'window:isMaximized',
-    (e) => BrowserWindow.fromWebContents(e.sender)?.isMaximized() ?? false
-  )
+  // All IPC channels (data persistence, image import/cleanup, window controls,
+  // and the app:ready reveal handshake) live in handlers.ts. Reveal has a 15 s
+  // backstop in case the renderer never signals.
+  registerHandlers({ ipcMain, BrowserWindow }, { store, onAppReady: revealMainWindow })
+  setTimeout(revealMainWindow, 15000)
 
   createWindow()
 

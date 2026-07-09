@@ -41,7 +41,7 @@ export default function DeckEditor({
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const backFileRef = useRef<HTMLInputElement>(null)
   const backSrc = deck.back
-    ? `${window.api.decks.imageUrl(deck.id, deck.back)}?v=${encodeURIComponent(deck.updatedAt)}`
+    ? `${window.api.decks.imageUrl(deck.id, deck.back)}?v=${deck.backVersion ?? 0}`
     : null
   const selected = deck.cards.find((c) => c.id === selectedId) ?? null
   const majors = majorsOf(deck)
@@ -109,7 +109,11 @@ export default function DeckEditor({
               {deck.back ? 'Replace back' : 'Set card back'}
             </Button>
             {deck.back && (
-              <Button size="small" color="inherit" onClick={() => onUpdateDeck({ back: undefined })}>
+              <Button
+                size="small"
+                color="inherit"
+                onClick={() => onUpdateDeck({ back: undefined })}
+              >
                 Remove
               </Button>
             )}
@@ -159,7 +163,12 @@ export default function DeckEditor({
         <Divider>Major Arcana ({majors.length})</Divider>
         <Box sx={gridSx}>
           {majors.map((card) => (
-            <CardThumb key={card.id} deck={deck} card={card} onClick={() => setSelectedId(card.id)} />
+            <CardThumb
+              key={card.id}
+              deck={deck}
+              card={card}
+              onClick={() => setSelectedId(card.id)}
+            />
           ))}
           <Button
             variant="outlined"

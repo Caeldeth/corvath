@@ -37,7 +37,9 @@ export function cardPlaceholderDataUrl(name: string): string {
   const lineHeight = 24
   const startY = H / 2 - ((lines.length - 1) * lineHeight) / 2
   const tspans = lines
-    .map((line, i) => `<tspan x="${W / 2}" y="${startY + i * lineHeight}">${escapeXml(line)}</tspan>`)
+    .map(
+      (line, i) => `<tspan x="${W / 2}" y="${startY + i * lineHeight}">${escapeXml(line)}</tspan>`
+    )
     .join('')
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}">

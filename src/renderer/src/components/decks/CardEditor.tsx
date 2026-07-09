@@ -12,7 +12,7 @@ import {
   Typography
 } from '@mui/material'
 import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined'
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import type { Deck, DeckCard } from '../../../../shared/types'
 import { cardPlaceholderDataUrl } from '../../lib/cardPlaceholder'
 
@@ -38,7 +38,7 @@ export default function CardEditor({
   if (!card) return null
 
   const imageSrc = card.image
-    ? `${window.api.decks.imageUrl(deck.id, card.image)}?v=${encodeURIComponent(deck.updatedAt)}`
+    ? `${window.api.decks.imageUrl(deck.id, card.image)}?v=${card.imageVersion ?? 0}`
     : cardPlaceholderDataUrl(card.name)
 
   return (
@@ -77,6 +77,14 @@ export default function CardEditor({
                 src={imageSrc}
                 alt={card.name}
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                onError={(e) => {
+                  // Missing art (e.g. a not-yet-drawn card in a partially
+                  // shipped deck) falls back to the generated name placeholder.
+                  const img = e.currentTarget
+                  if (img.dataset.fallback) return
+                  img.dataset.fallback = '1'
+                  img.src = cardPlaceholderDataUrl(card.name)
+                }}
               />
             </Box>
             <Stack spacing={1} sx={{ flexGrow: 1 }}>
@@ -111,7 +119,11 @@ export default function CardEditor({
                   {card.image ? 'Replace image' : 'Import image'}
                 </Button>
                 {card.image && (
-                  <Button size="small" color="inherit" onClick={() => onChange({ image: undefined })}>
+                  <Button
+                    size="small"
+                    color="inherit"
+                    onClick={() => onChange({ image: undefined })}
+                  >
                     Remove
                   </Button>
                 )}

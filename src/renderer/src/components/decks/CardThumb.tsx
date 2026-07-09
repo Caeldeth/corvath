@@ -10,7 +10,7 @@ interface CardThumbProps {
 
 export default function CardThumb({ deck, card, onClick }: CardThumbProps) {
   const imageSrc = card.image
-    ? `${window.api.decks.imageUrl(deck.id, card.image)}?v=${encodeURIComponent(deck.updatedAt)}`
+    ? `${window.api.decks.imageUrl(deck.id, card.image)}?v=${card.imageVersion ?? 0}`
     : cardPlaceholderDataUrl(card.name)
   const hasMeaning = !!(card.meaning && card.meaning.trim())
 
@@ -34,6 +34,14 @@ export default function CardThumb({ deck, card, onClick }: CardThumbProps) {
             src={imageSrc}
             alt={card.name}
             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            onError={(e) => {
+              // Missing art (e.g. a not-yet-drawn card in a partially shipped
+              // deck) falls back to the generated name placeholder.
+              const img = e.currentTarget
+              if (img.dataset.fallback) return
+              img.dataset.fallback = '1'
+              img.src = cardPlaceholderDataUrl(card.name)
+            }}
           />
           {card.section === 'major' && card.number !== undefined && (
             <Box

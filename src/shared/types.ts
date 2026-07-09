@@ -1,6 +1,6 @@
 export type Orientation = 'upright' | 'reversed'
 
-export type ThemeName = 'hybrasyl' | 'danaan' | 'chadul' | 'grinneal'
+export type ThemeName = 'hybrasyl' | 'danaan' | 'chadul' | 'grinneal' | 'mundanes' | 'dubhaimid'
 
 /** A single card / question within a reading. */
 export interface Entry {
@@ -91,6 +91,8 @@ export interface DeckCard {
   rank?: string
   /** Imported image filename, relative to the deck's image folder. */
   image?: string
+  /** Bumped each time the card's image is (re)imported, for per-image cache-busting. */
+  imageVersion?: number
   keywords?: string[]
   meaning?: string
   meaningReversed?: string
@@ -116,6 +118,8 @@ export interface Deck {
   supportsReversed: boolean
   /** Optional card-back image filename (served like card images). */
   back?: string
+  /** Bumped each time the back image is (re)imported, for per-image cache-busting. */
+  backVersion?: number
   cards: DeckCard[]
   createdAt: string
   updatedAt: string
@@ -148,6 +152,10 @@ export interface TarotApi {
     save(decks: Deck[]): Promise<void>
     /** Copy raw image bytes into the deck's image folder; returns the stored filename. */
     saveImage(deckId: string, cardId: string, ext: string, data: Uint8Array): Promise<SavedImage>
+    /** Best-effort delete of a single card's stored image file(s). */
+    deleteImage(deckId: string, cardId: string): Promise<void>
+    /** Best-effort delete of an entire deck's image directory. */
+    deleteDeckImages(deckId: string): Promise<void>
     /** Build the `corvath-asset://` URL for a stored image (cache-busted). */
     imageUrl(deckId: string, filename: string): string
   }
@@ -157,5 +165,7 @@ export interface TarotApi {
   }
   loadSettings(): Promise<Settings>
   saveSettings(settings: Settings): Promise<void>
+  /** Signal the main process that the renderer has hydrated; reveals the window. */
+  appReady(): void
   window: WindowControls
 }

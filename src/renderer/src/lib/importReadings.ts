@@ -74,7 +74,7 @@ export function parseReadingsImport(text: string, layouts: Layout[]): ImportResu
 
     const layoutName = asString(r.layout)?.trim()
     const layout = layoutName
-      ? layouts.find((l) => l.name.toLowerCase() === layoutName.toLowerCase()) ?? null
+      ? (layouts.find((l) => l.name.toLowerCase() === layoutName.toLowerCase()) ?? null)
       : null
     if (layoutName && !layout) errors.push(`${where}layout "${layoutName}" not found.`)
 

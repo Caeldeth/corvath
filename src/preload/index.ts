@@ -16,6 +16,10 @@ const api: TarotApi = {
       ext: string,
       data: Uint8Array
     ): Promise<SavedImage> => ipcRenderer.invoke('decks:saveImage', deckId, cardId, ext, data),
+    deleteImage: (deckId: string, cardId: string): Promise<void> =>
+      ipcRenderer.invoke('decks:deleteImage', deckId, cardId),
+    deleteDeckImages: (deckId: string): Promise<void> =>
+      ipcRenderer.invoke('decks:deleteDeckImages', deckId),
     imageUrl: (deckId: string, filename: string): string =>
       `corvath-asset://img/${encodeURIComponent(deckId)}/${encodeURIComponent(filename)}`
   },
@@ -24,7 +28,9 @@ const api: TarotApi = {
     save: (layouts: Layout[]): Promise<void> => ipcRenderer.invoke('layouts:save', layouts)
   },
   loadSettings: (): Promise<Settings> => ipcRenderer.invoke('settings:load'),
-  saveSettings: (settings: Settings): Promise<void> => ipcRenderer.invoke('settings:save', settings),
+  saveSettings: (settings: Settings): Promise<void> =>
+    ipcRenderer.invoke('settings:save', settings),
+  appReady: (): void => ipcRenderer.send('app:ready'),
   window: {
     minimize: (): void => ipcRenderer.send('window:minimize'),
     toggleMaximize: (): void => ipcRenderer.send('window:toggleMaximize'),
@@ -38,12 +44,7 @@ const api: TarotApi = {
   }
 }
 
-if (process.contextIsolated) {
-  contextBridge.exposeInMainWorld('electron', electronAPI)
-  contextBridge.exposeInMainWorld('api', api)
-} else {
-  // @ts-ignore (define types in env.d.ts)
-  window.electron = electronAPI
-  // @ts-ignore (define types in env.d.ts)
-  window.api = api
-}
+// We always run with contextIsolation: true (the BrowserWindow default), so the
+// non-isolated fallback some templates ship with is dead code here.
+contextBridge.exposeInMainWorld('electron', electronAPI)
+contextBridge.exposeInMainWorld('api', api)
