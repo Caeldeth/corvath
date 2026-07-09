@@ -16,6 +16,7 @@ const THEME_NAMES = ['hybrasyl', 'danaan', 'chadul', 'grinneal', 'mundanes', 'du
 export const themeNameSchema = z.enum(THEME_NAMES)
 export const orientationSchema = z.enum(['upright', 'reversed'])
 const readingSourceSchema = z.enum(['manual', 'corvath'])
+const drawModeSchema = z.enum(['deal', 'fan'])
 const deckSourceSchema = z.enum(['top', 'bottom'])
 const cardSectionSchema = z.enum(['major', 'minor'])
 
@@ -39,6 +40,8 @@ export const readingSchema: z.ZodType<Reading> = z.object({
   date: z.string(),
   deck: z.string(),
   source: readingSourceSchema.optional(),
+  seed: z.number().optional(),
+  drawMode: drawModeSchema.optional(),
   layoutId: z.string().optional(),
   layoutName: z.string().optional(),
   notes: z.string().optional(),

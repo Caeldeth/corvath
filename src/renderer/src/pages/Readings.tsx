@@ -11,9 +11,20 @@ interface ReadingsProps {
   decks: Deck[]
   /** Layouts from the builder, offered as spreads. */
   layouts: Layout[]
+  /** Selected reading id, lifted to App so the Draw tab can hand one off. */
+  selectedId: string | null
+  onSelectId: (id: string | null) => void
+  /** Switch to the Draw tab. */
+  onGoToDraw: () => void
 }
 
-export default function Readings({ decks, layouts }: ReadingsProps) {
+export default function Readings({
+  decks,
+  layouts,
+  selectedId,
+  onSelectId,
+  onGoToDraw
+}: ReadingsProps) {
   const {
     readings,
     loaded,
@@ -26,17 +37,16 @@ export default function Readings({ decks, layouts }: ReadingsProps) {
     applyLayout,
     importReadings
   } = useReadings()
-  const [selectedId, setSelectedId] = useState<string | null>(null)
   const [importOpen, setImportOpen] = useState(false)
 
   useEffect(() => {
     if (!loaded) return
     if (selectedId && !readings.some((r) => r.id === selectedId)) {
-      setSelectedId(readings[0]?.id ?? null)
+      onSelectId(readings[0]?.id ?? null)
     } else if (!selectedId && readings.length > 0) {
-      setSelectedId(readings[0].id)
+      onSelectId(readings[0].id)
     }
-  }, [loaded, readings, selectedId])
+  }, [loaded, readings, selectedId, onSelectId])
 
   const selectedReading = useMemo(
     () => readings.find((r) => r.id === selectedId) ?? null,
@@ -45,13 +55,13 @@ export default function Readings({ decks, layouts }: ReadingsProps) {
 
   const handleCreate = (): void => {
     const reading = createReading()
-    setSelectedId(reading.id)
+    onSelectId(reading.id)
   }
 
   const handleImport = (imported: Parameters<typeof importReadings>[0]): void => {
     importReadings(imported)
     setImportOpen(false)
-    if (imported[0]) setSelectedId(imported[0].id)
+    if (imported[0]) onSelectId(imported[0].id)
   }
 
   return (
@@ -59,8 +69,9 @@ export default function Readings({ decks, layouts }: ReadingsProps) {
       <ReadingList
         readings={readings}
         selectedId={selectedId}
-        onSelect={setSelectedId}
+        onSelect={onSelectId}
         onCreate={handleCreate}
+        onDraw={onGoToDraw}
         onImport={() => setImportOpen(true)}
         onDelete={deleteReading}
       />

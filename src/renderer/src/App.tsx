@@ -11,6 +11,7 @@ import { useLayouts } from './hooks/useLayouts'
 import TitleBar from './components/TitleBar'
 import NavBar, { type View } from './components/NavBar'
 import Readings from './pages/Readings'
+import Draw from './pages/Draw'
 import DeckBuilder from './pages/DeckBuilder'
 import Layouts from './pages/Layouts'
 
@@ -53,6 +54,9 @@ function App(): React.JSX.Element {
   const hydrated = useSettingsStore((s) => s.hydrated)
   const setTheme = useSettingsStore((s) => s.setTheme)
   const [view, setView] = useState<View>('readings')
+  // Lifted so the Draw tab can select the reading it produces when it hands off
+  // to the Readings tab.
+  const [selectedReadingId, setSelectedReadingId] = useState<string | null>(null)
   const decksApi = useDecks()
   const layoutsApi = useLayouts()
 
@@ -118,7 +122,25 @@ function App(): React.JSX.Element {
         <TitleBar themeName={themeName} onThemeChange={changeTheme} />
         <NavBar view={view} onChange={setView} />
 
-        {view === 'readings' && <Readings decks={decksApi.decks} layouts={layoutsApi.layouts} />}
+        {view === 'readings' && (
+          <Readings
+            decks={decksApi.decks}
+            layouts={layoutsApi.layouts}
+            selectedId={selectedReadingId}
+            onSelectId={setSelectedReadingId}
+            onGoToDraw={() => setView('draw')}
+          />
+        )}
+        {view === 'draw' && (
+          <Draw
+            decks={decksApi.decks}
+            layouts={layoutsApi.layouts}
+            onDone={(id) => {
+              setSelectedReadingId(id)
+              setView('readings')
+            }}
+          />
+        )}
         {view === 'decks' && <DeckBuilder api={decksApi} />}
         {view === 'layouts' && <Layouts api={layoutsApi} />}
       </Box>

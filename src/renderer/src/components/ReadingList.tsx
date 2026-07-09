@@ -10,6 +10,7 @@ import {
   Typography
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
+import CasinoOutlinedIcon from '@mui/icons-material/CasinoOutlined'
 import FileUploadOutlinedIcon from '@mui/icons-material/FileUploadOutlined'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import type { Reading } from '../../../shared/types'
@@ -19,6 +20,7 @@ interface ReadingListProps {
   selectedId: string | null
   onSelect: (id: string) => void
   onCreate: () => void
+  onDraw: () => void
   onImport: () => void
   onDelete: (id: string) => void
 }
@@ -28,6 +30,7 @@ export default function ReadingList({
   selectedId,
   onSelect,
   onCreate,
+  onDraw,
   onImport,
   onDelete
 }: ReadingListProps) {
@@ -47,7 +50,10 @@ export default function ReadingList({
       }}
     >
       <Box sx={{ p: 1.5, display: 'flex', flexDirection: 'column', gap: 1 }}>
-        <Button fullWidth variant="contained" startIcon={<AddIcon />} onClick={onCreate}>
+        <Button fullWidth variant="contained" startIcon={<CasinoOutlinedIcon />} onClick={onDraw}>
+          Draw a Reading
+        </Button>
+        <Button fullWidth startIcon={<AddIcon />} onClick={onCreate}>
           New Reading
         </Button>
         <Button fullWidth startIcon={<FileUploadOutlinedIcon />} onClick={onImport}>

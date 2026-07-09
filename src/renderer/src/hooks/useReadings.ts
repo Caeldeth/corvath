@@ -5,6 +5,7 @@ export interface UseReadings {
   readings: Reading[]
   loaded: boolean
   createReading: () => Reading
+  addReading: (reading: Reading) => void
   updateReading: (id: string, patch: Partial<Reading>) => void
   deleteReading: (id: string) => void
   addEntry: (readingId: string) => void
@@ -25,6 +26,7 @@ export function useReadings(): UseReadings {
   const hydrated = useReadingsStore((s) => s.hydrated)
   const {
     createReading,
+    addReading,
     updateReading,
     deleteReading,
     addEntry,
@@ -38,6 +40,7 @@ export function useReadings(): UseReadings {
     readings,
     loaded: hydrated,
     createReading,
+    addReading,
     updateReading,
     deleteReading,
     addEntry,

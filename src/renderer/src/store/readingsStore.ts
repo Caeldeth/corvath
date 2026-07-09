@@ -14,6 +14,7 @@ interface ReadingsState {
   hydrated: boolean
   hydrate: () => Promise<void>
   createReading: () => Reading
+  addReading: (reading: Reading) => void
   updateReading: (id: string, patch: Partial<Reading>) => void
   deleteReading: (id: string) => void
   addEntry: (readingId: string) => void
@@ -50,6 +51,9 @@ export const useReadingsStore = create<ReadingsState>((set, get) => ({
     set((s) => ({ readings: [reading, ...s.readings] }))
     return reading
   },
+
+  // Prepend a fully-formed reading (e.g. one built by the draw flow).
+  addReading: (reading) => set((s) => ({ readings: [reading, ...s.readings] })),
 
   updateReading: (id, patch) =>
     set((s) => ({
