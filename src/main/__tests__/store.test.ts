@@ -259,3 +259,55 @@ describe('image cleanup', () => {
     await expect(s.deleteDeckImages('nope')).resolves.toBeUndefined()
   })
 })
+
+describe('deck image export/import (read/write)', () => {
+  const imgDeck = (overrides: Partial<Deck> = {}): Deck => ({
+    id: 'd1',
+    name: 'D',
+    suits: [],
+    pipRanks: [],
+    courtRanks: [],
+    supportsReversed: false,
+    back: 'back.webp',
+    cards: [{ id: 'the-star', section: 'major', name: 'The Star', image: 'the-star.webp' }],
+    createdAt: 'a',
+    updatedAt: 'b',
+    ...overrides
+  })
+
+  it('writeDeckImages then readDeckImages round-trips a deck’s images', async () => {
+    const s = stores()
+    await s.writeDeckImages('d1', [
+      { filename: 'the-star.webp', data: new Uint8Array([1, 2, 3]) },
+      { filename: 'back.webp', data: new Uint8Array([4, 5]) }
+    ])
+    const out = await s.readDeckImages(imgDeck())
+    const byName = Object.fromEntries(out.map((i) => [i.filename, Array.from(i.data)]))
+    expect(byName['the-star.webp']).toEqual([1, 2, 3])
+    expect(byName['back.webp']).toEqual([4, 5])
+    expect(out).toHaveLength(2)
+  })
+
+  it('readDeckImages falls back to bundled art when the user has no copy', async () => {
+    const s = stores()
+    await fs.mkdir(join(bundled, 'emp'), { recursive: true })
+    await fs.writeFile(join(bundled, 'emp', 'cups-ace.webp'), new Uint8Array([7, 7]))
+    const deck = imgDeck({
+      id: 'emp',
+      back: undefined,
+      cards: [{ id: 'cups-ace', section: 'minor', name: 'Ace of Cups', image: 'cups-ace.webp' }]
+    })
+    const out = await s.readDeckImages(deck)
+    expect(out).toHaveLength(1)
+    expect(Array.from(out[0].data)).toEqual([7, 7])
+  })
+
+  it('writeDeckImages skips a filename that would escape the deck folder', async () => {
+    const s = stores()
+    await s.writeDeckImages('d1', [{ filename: '..', data: new Uint8Array([9]) }])
+    // '..' resolves to the images root itself → rejected, so nothing is written
+    // (the deck folder is created but stays empty).
+    const entries = await fs.readdir(join(dir, 'decks', 'd1'))
+    expect(entries).toHaveLength(0)
+  })
+})

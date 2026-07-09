@@ -1,6 +1,15 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
-import type { Deck, Layout, Reading, SavedImage, Settings, TarotApi } from '../shared/types'
+import type {
+  Deck,
+  DeckExportResult,
+  DeckImportResult,
+  Layout,
+  Reading,
+  SavedImage,
+  Settings,
+  TarotApi
+} from '../shared/types'
 
 const api: TarotApi = {
   readings: {
@@ -21,7 +30,11 @@ const api: TarotApi = {
     deleteDeckImages: (deckId: string): Promise<void> =>
       ipcRenderer.invoke('decks:deleteDeckImages', deckId),
     imageUrl: (deckId: string, filename: string): string =>
-      `corvath-asset://img/${encodeURIComponent(deckId)}/${encodeURIComponent(filename)}`
+      `corvath-asset://img/${encodeURIComponent(deckId)}/${encodeURIComponent(filename)}`,
+    exportDeck: (deck: Deck): Promise<DeckExportResult> =>
+      ipcRenderer.invoke('decks:exportDeck', deck),
+    importDeck: (existingNames: string[]): Promise<DeckImportResult> =>
+      ipcRenderer.invoke('decks:importDeck', existingNames)
   },
   layouts: {
     getAll: (): Promise<Layout[]> => ipcRenderer.invoke('layouts:getAll'),

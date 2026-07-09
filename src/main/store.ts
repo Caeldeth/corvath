@@ -115,6 +115,10 @@ export interface Stores {
   deleteCardImage(deckId: string, cardId: string): Promise<void>
   /** Best-effort delete of an entire deck's image directory. Never throws. */
   deleteDeckImages(deckId: string): Promise<void>
+  /** Read a deck's image bytes (user override first, then bundled art). For export. */
+  readDeckImages(deck: Deck): Promise<{ filename: string; data: Uint8Array }[]>
+  /** Write raw image bytes into a deck's image folder (path-safe). For import. */
+  writeDeckImages(deckId: string, files: { filename: string; data: Uint8Array }[]): Promise<void>
   /** Absolute path to a user-imported deck image, or null if it escapes the data dir. */
   resolveImagePath(deckId: string, filename: string): string | null
   /** Absolute path to a bundled (shipped) deck image, or null if it escapes the bundle. */
@@ -224,6 +228,47 @@ export function createStores(dir: string, bundledDecksDir: string): Stores {
   const resolveBundledImagePath = (deckId: string, filename: string): string | null =>
     resolveWithin(bundledDecksDir, deckId, filename)
 
+  async function readDeckImages(deck: Deck): Promise<{ filename: string; data: Uint8Array }[]> {
+    const names = new Set<string>()
+    for (const card of deck.cards) if (card.image) names.add(card.image)
+    if (deck.back) names.add(deck.back)
+
+    const out: { filename: string; data: Uint8Array }[] = []
+    for (const filename of names) {
+      // Prefer the user's imported image; fall back to shipped/bundled art so an
+      // exported built-in deck carries its pictures too.
+      const candidates = [
+        resolveImagePath(deck.id, filename),
+        resolveBundledImagePath(deck.id, filename)
+      ]
+      for (const filePath of candidates) {
+        if (!filePath) continue
+        try {
+          const data = await fs.readFile(filePath)
+          out.push({ filename, data: new Uint8Array(data) })
+          break
+        } catch {
+          /* try next candidate */
+        }
+      }
+    }
+    return out
+  }
+
+  async function writeDeckImages(
+    deckId: string,
+    files: { filename: string; data: Uint8Array }[]
+  ): Promise<void> {
+    await fs.mkdir(join(imagesRoot, safeSegment(deckId)), { recursive: true })
+    for (const { filename, data } of files) {
+      // resolveWithin re-cleans both segments and rejects anything (e.g. '..')
+      // that would escape the deck's folder.
+      const target = resolveWithin(imagesRoot, deckId, filename)
+      if (!target) continue
+      await fs.writeFile(target, data)
+    }
+  }
+
   return {
     loadSettings: () => settings.load(),
     saveSettings: (value) => settings.save(value),
@@ -266,6 +311,8 @@ export function createStores(dir: string, bundledDecksDir: string): Stores {
     saveCardImage,
     deleteCardImage,
     deleteDeckImages,
+    readDeckImages,
+    writeDeckImages,
     resolveImagePath,
     resolveBundledImagePath
   }

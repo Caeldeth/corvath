@@ -9,6 +9,8 @@ import {
   Tooltip
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
+import FileUploadOutlinedIcon from '@mui/icons-material/FileUploadOutlined'
+import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import type { Deck } from '../../../../shared/types'
 
@@ -17,6 +19,8 @@ interface DeckListProps {
   selectedId: string | null
   onSelect: (id: string) => void
   onCreate: () => void
+  onImport: () => void
+  onExport: (id: string) => void
   onDelete: (id: string) => void
 }
 
@@ -25,6 +29,8 @@ export default function DeckList({
   selectedId,
   onSelect,
   onCreate,
+  onImport,
+  onExport,
   onDelete
 }: DeckListProps) {
   return (
@@ -39,9 +45,12 @@ export default function DeckList({
         borderColor: 'divider'
       }}
     >
-      <Box sx={{ p: 1.5 }}>
+      <Box sx={{ p: 1.5, display: 'flex', flexDirection: 'column', gap: 1 }}>
         <Button fullWidth variant="contained" startIcon={<AddIcon />} onClick={onCreate}>
           New Deck
+        </Button>
+        <Button fullWidth startIcon={<FileUploadOutlinedIcon />} onClick={onImport}>
+          Import Deck
         </Button>
       </Box>
       <Box sx={{ flexGrow: 1, overflowY: 'auto' }}>
@@ -51,19 +60,34 @@ export default function DeckList({
               key={deck.id}
               disablePadding
               secondaryAction={
-                <Tooltip title="Delete deck">
-                  <IconButton
-                    edge="end"
-                    size="small"
-                    aria-label="delete deck"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onDelete(deck.id)
-                    }}
-                  >
-                    <DeleteOutlineIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
+                <Box sx={{ display: 'flex' }}>
+                  <Tooltip title="Export deck">
+                    <IconButton
+                      edge="end"
+                      size="small"
+                      aria-label="export deck"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onExport(deck.id)
+                      }}
+                    >
+                      <FileDownloadOutlinedIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Delete deck">
+                    <IconButton
+                      edge="end"
+                      size="small"
+                      aria-label="delete deck"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onDelete(deck.id)
+                      }}
+                    >
+                      <DeleteOutlineIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
               }
             >
               <ListItemButton selected={deck.id === selectedId} onClick={() => onSelect(deck.id)}>

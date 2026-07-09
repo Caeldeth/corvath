@@ -7,16 +7,36 @@
  * their payload with a zod schema first — an invalid payload throws, which
  * rejects the `invoke` before anything touches disk.
  */
-import type { IpcMain, BrowserWindow as BrowserWindowType } from 'electron'
-import type { Deck, Layout, Reading, SavedImage, Settings } from '../shared/types'
+import { readFile, writeFile } from 'fs/promises'
+import { z } from 'zod'
+import type {
+  IpcMain,
+  BrowserWindow as BrowserWindowType,
+  Dialog,
+  OpenDialogOptions,
+  SaveDialogOptions
+} from 'electron'
+import type {
+  Deck,
+  DeckExportResult,
+  DeckImportResult,
+  Layout,
+  Reading,
+  SavedImage,
+  Settings
+} from '../shared/types'
 import type { Stores } from './store'
 import {
   decksSchema,
+  deckSchema,
   layoutsSchema,
   readingsSchema,
   saveImageArgsSchema,
   settingsSchema
 } from './schemas'
+import { CORVATHDECK_EXT, packDeck, unpackDeck, uniqueDeckName } from './deckPackage'
+
+const DECK_FILTERS = [{ name: 'Corvath Deck', extensions: [CORVATHDECK_EXT] }]
 
 export interface HandlerContext {
   store: Stores
@@ -59,14 +79,81 @@ export const deleteImage = (ctx: HandlerContext, deckId: string, cardId: string)
 export const deleteDeckImages = (ctx: HandlerContext, deckId: string): Promise<void> =>
   ctx.store.deleteDeckImages(deckId)
 
+/** Prompt for a destination and write the deck (+ its images) as a `.corvathdeck` zip. */
+export async function exportDeck(
+  ctx: HandlerContext,
+  dialog: Dialog,
+  win: BrowserWindowType | null,
+  deck: unknown
+): Promise<DeckExportResult> {
+  const parsed = deckSchema.parse(deck)
+  const images = await ctx.store.readDeckImages(parsed)
+  const bytes = packDeck(parsed, images)
+
+  const safeName = (parsed.name || 'deck').replace(/[^a-z0-9._-]+/gi, '_')
+  const opts: SaveDialogOptions = {
+    defaultPath: `${safeName}.${CORVATHDECK_EXT}`,
+    filters: DECK_FILTERS
+  }
+  const { canceled, filePath } = win
+    ? await dialog.showSaveDialog(win, opts)
+    : await dialog.showSaveDialog(opts)
+  if (canceled || !filePath) return { canceled: true }
+
+  try {
+    await writeFile(filePath, bytes)
+    return { ok: true, path: filePath }
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Failed to write the deck file.' }
+  }
+}
+
+/** Prompt for a `.corvathdeck`, then import it as a fresh user deck (new id + unique name). */
+export async function importDeck(
+  ctx: HandlerContext,
+  dialog: Dialog,
+  win: BrowserWindowType | null,
+  existingNames: unknown
+): Promise<DeckImportResult> {
+  const taken = z.array(z.string()).parse(existingNames)
+  const opts: OpenDialogOptions = { properties: ['openFile'], filters: DECK_FILTERS }
+  const { canceled, filePaths } = win
+    ? await dialog.showOpenDialog(win, opts)
+    : await dialog.showOpenDialog(opts)
+  if (canceled || !filePaths[0]) return { canceled: true }
+
+  try {
+    const bytes = await readFile(filePaths[0])
+    const pkg = unpackDeck(new Uint8Array(bytes))
+    const now = new Date().toISOString()
+    const id = crypto.randomUUID()
+    // Imported copies are plain user decks: new id, unique name, and no built-in
+    // seed markers (so seeding never overwrites or merges them).
+    const deck: Deck = {
+      ...pkg.deck,
+      id,
+      name: uniqueDeckName(pkg.deck.name, taken),
+      builtIn: false,
+      seedVersion: undefined,
+      createdAt: now,
+      updatedAt: now
+    }
+    await ctx.store.writeDeckImages(id, pkg.images)
+    return { deck }
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Failed to import the deck.' }
+  }
+}
+
 interface RegisterDeps {
   ipcMain: IpcMain
   BrowserWindow: typeof BrowserWindowType
+  dialog: Dialog
 }
 
 /** Wire every IPC channel to its handler. */
 export function registerHandlers(
-  { ipcMain, BrowserWindow }: RegisterDeps,
+  { ipcMain, BrowserWindow, dialog }: RegisterDeps,
   ctx: HandlerContext
 ): void {
   // Readings + settings persistence
@@ -83,6 +170,12 @@ export function registerHandlers(
   )
   ipcMain.handle('decks:deleteImage', (_e, deckId, cardId) => deleteImage(ctx, deckId, cardId))
   ipcMain.handle('decks:deleteDeckImages', (_e, deckId) => deleteDeckImages(ctx, deckId))
+  ipcMain.handle('decks:exportDeck', (e, deck) =>
+    exportDeck(ctx, dialog, BrowserWindow.fromWebContents(e.sender), deck)
+  )
+  ipcMain.handle('decks:importDeck', (e, existingNames) =>
+    importDeck(ctx, dialog, BrowserWindow.fromWebContents(e.sender), existingNames)
+  )
 
   // Layouts persistence
   ipcMain.handle('layouts:getAll', () => getLayouts(ctx))

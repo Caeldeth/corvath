@@ -1,8 +1,13 @@
 import { useEffect, useState } from 'react'
-import { Box, Typography } from '@mui/material'
+import { Alert, Box, Snackbar, Typography } from '@mui/material'
 import type { UseDecks } from '../hooks/useDecks'
 import DeckList from '../components/decks/DeckList'
 import DeckEditor from '../components/decks/DeckEditor'
+
+interface Toast {
+  message: string
+  severity: 'success' | 'error'
+}
 
 interface DeckBuilderProps {
   api: UseDecks
@@ -19,9 +24,12 @@ export default function DeckBuilder({ api }: DeckBuilderProps) {
     updateCard,
     deleteCard,
     importCardImage,
-    importDeckBack
+    importDeckBack,
+    exportDeck,
+    importDeck
   } = api
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [toast, setToast] = useState<Toast | null>(null)
 
   // Keep selection valid; default to the first deck once loaded.
   useEffect(() => {
@@ -40,6 +48,25 @@ export default function DeckBuilder({ api }: DeckBuilderProps) {
     setSelectedId(deck.id)
   }
 
+  const handleImport = async (): Promise<void> => {
+    const result = await importDeck()
+    if (result.deck) {
+      setSelectedId(result.deck.id)
+      setToast({ message: `Imported "${result.deck.name}".`, severity: 'success' })
+    } else if (result.error) {
+      setToast({ message: result.error, severity: 'error' })
+    }
+  }
+
+  const handleExport = async (id: string): Promise<void> => {
+    const result = await exportDeck(id)
+    if (result.ok) {
+      setToast({ message: 'Deck exported.', severity: 'success' })
+    } else if (result.error) {
+      setToast({ message: result.error, severity: 'error' })
+    }
+  }
+
   return (
     <Box sx={{ flexGrow: 1, display: 'flex', minHeight: 0 }}>
       <DeckList
@@ -47,6 +74,8 @@ export default function DeckBuilder({ api }: DeckBuilderProps) {
         selectedId={selectedId}
         onSelect={setSelectedId}
         onCreate={handleCreate}
+        onImport={() => void handleImport()}
+        onExport={(id) => void handleExport(id)}
         onDelete={deleteDeck}
       />
       {selected ? (
@@ -67,6 +96,24 @@ export default function DeckBuilder({ api }: DeckBuilderProps) {
           </Typography>
         </Box>
       )}
+
+      <Snackbar
+        open={!!toast}
+        autoHideDuration={4000}
+        onClose={() => setToast(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        {toast ? (
+          <Alert
+            severity={toast.severity}
+            variant="filled"
+            onClose={() => setToast(null)}
+            sx={{ width: '100%' }}
+          >
+            {toast.message}
+          </Alert>
+        ) : undefined}
+      </Snackbar>
     </Box>
   )
 }
