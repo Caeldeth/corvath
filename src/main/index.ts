@@ -4,7 +4,7 @@ import { readFile } from 'fs/promises'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { createStores } from './store'
 import { createSplashWindow } from './splash'
-import type { Deck, Layout, Reading, Settings } from '../shared/types'
+import { registerHandlers } from './handlers'
 
 // Roaming settings + readings + decks live in %APPDATA%/Themisco/Corvath; the
 // disposable cache (userData) goes in %LOCALAPPDATA%/Themisco/Corvath. Electron
@@ -130,43 +130,10 @@ app.whenReady().then(async () => {
   await store.ensureDecksSeeded(seededAt)
   await store.ensureLayoutsSeeded(seededAt)
 
-  // Readings + settings persistence
-  ipcMain.handle('readings:getAll', () => store.loadReadings())
-  ipcMain.handle('readings:save', (_e, readings: Reading[]) => store.saveReadings(readings))
-  ipcMain.handle('settings:load', () => store.loadSettings())
-  ipcMain.handle('settings:save', (_e, settings: Settings) => store.saveSettings(settings))
-
-  // Decks persistence + image import
-  ipcMain.handle('decks:getAll', () => store.loadDecks())
-  ipcMain.handle('decks:save', (_e, decks: Deck[]) => store.saveDecks(decks))
-  ipcMain.handle(
-    'decks:saveImage',
-    async (_e, deckId: string, cardId: string, ext: string, data: Uint8Array) => ({
-      filename: await store.saveCardImage(deckId, cardId, ext, data)
-    })
-  )
-
-  // Layouts persistence
-  ipcMain.handle('layouts:getAll', () => store.loadLayouts())
-  ipcMain.handle('layouts:save', (_e, layouts: Layout[]) => store.saveLayouts(layouts))
-
-  // Window controls (custom frameless title bar)
-  ipcMain.on('window:minimize', (e) => BrowserWindow.fromWebContents(e.sender)?.minimize())
-  ipcMain.on('window:toggleMaximize', (e) => {
-    const win = BrowserWindow.fromWebContents(e.sender)
-    if (!win) return
-    if (win.isMaximized()) win.unmaximize()
-    else win.maximize()
-  })
-  ipcMain.on('window:close', (e) => BrowserWindow.fromWebContents(e.sender)?.close())
-  ipcMain.handle(
-    'window:isMaximized',
-    (e) => BrowserWindow.fromWebContents(e.sender)?.isMaximized() ?? false
-  )
-
-  // Reveal the window once the renderer has hydrated (its first frame is already
-  // themed), with a 15 s backstop in case that signal never arrives.
-  ipcMain.once('app:ready', revealMainWindow)
+  // All IPC channels (data persistence, image import/cleanup, window controls,
+  // and the app:ready reveal handshake) live in handlers.ts. Reveal has a 15 s
+  // backstop in case the renderer never signals.
+  registerHandlers({ ipcMain, BrowserWindow }, { store, onAppReady: revealMainWindow })
   setTimeout(revealMainWindow, 15000)
 
   createWindow()

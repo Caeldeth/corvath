@@ -16,6 +16,10 @@ const api: TarotApi = {
       ext: string,
       data: Uint8Array
     ): Promise<SavedImage> => ipcRenderer.invoke('decks:saveImage', deckId, cardId, ext, data),
+    deleteImage: (deckId: string, cardId: string): Promise<void> =>
+      ipcRenderer.invoke('decks:deleteImage', deckId, cardId),
+    deleteDeckImages: (deckId: string): Promise<void> =>
+      ipcRenderer.invoke('decks:deleteDeckImages', deckId),
     imageUrl: (deckId: string, filename: string): string =>
       `corvath-asset://img/${encodeURIComponent(deckId)}/${encodeURIComponent(filename)}`
   },

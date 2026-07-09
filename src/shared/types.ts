@@ -148,6 +148,10 @@ export interface TarotApi {
     save(decks: Deck[]): Promise<void>
     /** Copy raw image bytes into the deck's image folder; returns the stored filename. */
     saveImage(deckId: string, cardId: string, ext: string, data: Uint8Array): Promise<SavedImage>
+    /** Best-effort delete of a single card's stored image file(s). */
+    deleteImage(deckId: string, cardId: string): Promise<void>
+    /** Best-effort delete of an entire deck's image directory. */
+    deleteDeckImages(deckId: string): Promise<void>
     /** Build the `corvath-asset://` URL for a stored image (cache-busted). */
     imageUrl(deckId: string, filename: string): string
   }

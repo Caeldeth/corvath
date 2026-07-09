@@ -1,18 +1,11 @@
 import { promises as fs } from 'fs'
-import { join, resolve } from 'path'
-import type { Deck, Layout, Reading, Settings, ThemeName } from '../shared/types'
+import { join, resolve, sep } from 'path'
+import type { Deck, DeckCard, Layout, Reading, Settings } from '../shared/types'
 import { createJsonStore } from './jsonStore'
 import { buildSeedDecks } from './seedDecks'
 import { buildSeedLayouts } from './seedLayouts'
+import { decksSchema, layoutsSchema, readingsSchema, settingsSchema } from './schemas'
 
-const THEME_NAMES: ThemeName[] = [
-  'hybrasyl',
-  'danaan',
-  'chadul',
-  'grinneal',
-  'mundanes',
-  'dubhaimid'
-]
 const DEFAULT_SETTINGS: Settings = { theme: 'hybrasyl' }
 
 const READINGS_VERSION = 1
@@ -46,13 +39,61 @@ export function safeSegment(value: string): string {
 }
 
 /**
- * Resolve `<root>/<deckId>/<filename>` and confirm the result stays inside
- * `root`, returning null if it escapes. Both segments are `safeSegment`-cleaned
- * first, so this is defence-in-depth against path traversal.
+ * Resolve `<root>/<deckId>/<filename>` and confirm the result stays strictly
+ * inside `root`, returning null if it escapes. Both segments are
+ * `safeSegment`-cleaned first, but that alone is not enough: `safeSegment`
+ * preserves dots, so a segment like `..` survives and `resolve` could land on a
+ * sibling that merely shares the root as a string prefix (e.g. root `.../decks`,
+ * target `.../decks.json`). Comparing against `resolve(root) + sep` requires the
+ * target to be a real child of the directory, closing that hole.
  */
 export function resolveWithin(root: string, deckId: string, filename: string): string | null {
-  const target = resolve(root, safeSegment(deckId), safeSegment(filename))
-  return target.startsWith(resolve(root)) ? target : null
+  const base = resolve(root)
+  const target = resolve(base, safeSegment(deckId), safeSegment(filename))
+  return target.startsWith(base + sep) ? target : null
+}
+
+const minorKey = (suit: string, rank: string): string => `${suit}|${rank}`
+
+/** Prefer a seed's own non-empty string; otherwise fall back to the user's. */
+const preferSeedString = (seedVal?: string, userVal?: string): string | undefined =>
+  seedVal && seedVal.trim() ? seedVal : userVal
+
+const preferSeedKeywords = (seedKw?: string[], userKw?: string[]): string[] | undefined =>
+  seedKw && seedKw.length ? seedKw : userKw
+
+/**
+ * Merge an updated seed deck over the user's existing copy: take the seed's
+ * structure and art, but preserve the user's meaning/meaningReversed/keywords
+ * (matched by id for majors, suit+rank for minors) wherever the seed leaves that
+ * field empty. This is used on a seedVersion bump so a content update never
+ * discards notes the user typed.
+ */
+export function mergeSeedDeck(userDeck: Deck, seed: Deck): Deck {
+  const byId = new Map(userDeck.cards.map((c) => [c.id, c]))
+  const bySuitRank = new Map(
+    userDeck.cards
+      .filter((c) => c.section === 'minor' && c.suit && c.rank)
+      .map((c) => [minorKey(c.suit!, c.rank!), c])
+  )
+
+  const cards: DeckCard[] = seed.cards.map((sc) => {
+    const prior =
+      sc.section === 'major'
+        ? byId.get(sc.id)
+        : sc.suit && sc.rank
+          ? bySuitRank.get(minorKey(sc.suit, sc.rank))
+          : undefined
+    if (!prior) return sc
+    return {
+      ...sc,
+      meaning: preferSeedString(sc.meaning, prior.meaning),
+      meaningReversed: preferSeedString(sc.meaningReversed, prior.meaningReversed),
+      keywords: preferSeedKeywords(sc.keywords, prior.keywords)
+    }
+  })
+
+  return { ...seed, cards }
 }
 
 export interface Stores {
@@ -70,6 +111,10 @@ export interface Stores {
   ensureLayoutsSeeded(now: string): Promise<void>
   /** Copy raw image bytes into <dir>/decks/<deckId>/, replacing any prior image for the card. */
   saveCardImage(deckId: string, cardId: string, ext: string, data: Uint8Array): Promise<string>
+  /** Best-effort delete of a single card's image file(s). Never throws. */
+  deleteCardImage(deckId: string, cardId: string): Promise<void>
+  /** Best-effort delete of an entire deck's image directory. Never throws. */
+  deleteDeckImages(deckId: string): Promise<void>
   /** Absolute path to a user-imported deck image, or null if it escapes the data dir. */
   resolveImagePath(deckId: string, filename: string): string | null
   /** Absolute path to a bundled (shipped) deck image, or null if it escapes the bundle. */
@@ -90,13 +135,8 @@ export function createStores(dir: string, bundledDecksDir: string): Stores {
     filename: 'settings.json',
     defaults: DEFAULT_SETTINGS,
     normalize: (data) => {
-      if (!isObject(data)) return null
-      const theme = data.theme
-      return {
-        theme: THEME_NAMES.includes(theme as ThemeName)
-          ? (theme as ThemeName)
-          : DEFAULT_SETTINGS.theme
-      }
+      const parsed = settingsSchema.safeParse(data)
+      return parsed.success ? parsed.data : null
     }
   })
 
@@ -105,8 +145,9 @@ export function createStores(dir: string, bundledDecksDir: string): Stores {
     filename: 'readings.json',
     defaults: DEFAULT_READINGS_FILE,
     normalize: (data) => {
-      if (!isObject(data) || !Array.isArray(data.readings)) return null
-      return { version: READINGS_VERSION, readings: data.readings as Reading[] }
+      if (!isObject(data)) return null
+      const parsed = readingsSchema.safeParse(data.readings)
+      return parsed.success ? { version: READINGS_VERSION, readings: parsed.data } : null
     }
   })
 
@@ -115,8 +156,9 @@ export function createStores(dir: string, bundledDecksDir: string): Stores {
     filename: 'decks.json',
     defaults: DEFAULT_DECKS_FILE,
     normalize: (data) => {
-      if (!isObject(data) || !Array.isArray(data.decks)) return null
-      return { version: DECKS_VERSION, decks: data.decks as Deck[] }
+      if (!isObject(data)) return null
+      const parsed = decksSchema.safeParse(data.decks)
+      return parsed.success ? { version: DECKS_VERSION, decks: parsed.data } : null
     }
   })
 
@@ -125,10 +167,25 @@ export function createStores(dir: string, bundledDecksDir: string): Stores {
     filename: 'layouts.json',
     defaults: DEFAULT_LAYOUTS_FILE,
     normalize: (data) => {
-      if (!isObject(data) || !Array.isArray(data.layouts)) return null
-      return { version: LAYOUTS_VERSION, layouts: data.layouts as Layout[] }
+      if (!isObject(data)) return null
+      const parsed = layoutsSchema.safeParse(data.layouts)
+      return parsed.success ? { version: LAYOUTS_VERSION, layouts: parsed.data } : null
     }
   })
+
+  /** Delete every file for a card id in a deck dir (bare name or any extension). */
+  async function unlinkCardFiles(deckDir: string, safeCard: string): Promise<void> {
+    try {
+      const existing = await fs.readdir(deckDir)
+      await Promise.all(
+        existing
+          .filter((f) => f === safeCard || f.startsWith(`${safeCard}.`))
+          .map((f) => fs.unlink(join(deckDir, f)).catch(() => {}))
+      )
+    } catch {
+      /* dir may not exist */
+    }
+  }
 
   async function saveCardImage(
     deckId: string,
@@ -144,20 +201,21 @@ export function createStores(dir: string, bundledDecksDir: string): Stores {
 
     // Remove any prior image for this card (any extension/version) so we never
     // accumulate stale files or serve a cached image after a replacement.
-    try {
-      const existing = await fs.readdir(deckDir)
-      await Promise.all(
-        existing
-          .filter((f) => f === `${safeCard}` || f.startsWith(`${safeCard}.`))
-          .map((f) => fs.unlink(join(deckDir, f)).catch(() => {}))
-      )
-    } catch {
-      /* dir may not exist yet */
-    }
+    await unlinkCardFiles(deckDir, safeCard)
 
     const filename = `${safeCard}.${safeExt}`
     await fs.writeFile(join(deckDir, filename), data)
     return filename
+  }
+
+  async function deleteCardImage(deckId: string, cardId: string): Promise<void> {
+    const deckDir = join(imagesRoot, safeSegment(deckId))
+    await unlinkCardFiles(deckDir, safeSegment(cardId))
+  }
+
+  async function deleteDeckImages(deckId: string): Promise<void> {
+    const deckDir = join(imagesRoot, safeSegment(deckId))
+    await fs.rm(deckDir, { recursive: true, force: true }).catch(() => {})
   }
 
   const resolveImagePath = (deckId: string, filename: string): string | null =>
@@ -179,8 +237,9 @@ export function createStores(dir: string, bundledDecksDir: string): Stores {
         await decks.save({ version: DECKS_VERSION, decks: seeds })
         return
       }
-      // Merge built-ins: add any the user is missing, and replace an existing
-      // built-in when its seed has a newer seedVersion (a content update).
+      // Merge built-ins: add any the user is missing, and update an existing
+      // built-in when its seed has a newer seedVersion (a content update) —
+      // preserving the user's per-card meanings/keywords via mergeSeedDeck.
       // User-created decks and customized decks at the current version are
       // left untouched.
       const next = [...(await decks.load()).decks]
@@ -192,7 +251,7 @@ export function createStores(dir: string, bundledDecksDir: string): Stores {
           next.push(seed)
           changed = true
         } else if (next[i].builtIn && (seed.seedVersion ?? 1) > (next[i].seedVersion ?? 1)) {
-          next[i] = seed
+          next[i] = mergeSeedDeck(next[i], seed)
           changed = true
         }
       }
@@ -205,6 +264,8 @@ export function createStores(dir: string, bundledDecksDir: string): Stores {
       await layouts.save({ version: LAYOUTS_VERSION, layouts: buildSeedLayouts(now) })
     },
     saveCardImage,
+    deleteCardImage,
+    deleteDeckImages,
     resolveImagePath,
     resolveBundledImagePath
   }

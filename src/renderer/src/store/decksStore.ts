@@ -36,6 +36,15 @@ interface DecksState {
 
 let suppressNextSave = false
 
+// Best-effort orphaned-image cleanup. Fire-and-forget: a failed unlink must
+// never block the state change (the main handler is itself best-effort).
+const cleanupCardImage = (deckId: string, cardId: string): void => {
+  window.api?.decks?.deleteImage(deckId, cardId).catch(() => {})
+}
+const cleanupDeckImages = (deckId: string): void => {
+  window.api?.decks?.deleteDeckImages(deckId).catch(() => {})
+}
+
 export const useDecksStore = create<DecksState>((set, get) => {
   // Structural mutations stamp updatedAt, matching the prior useDecks `mutate`.
   const mutate = (id: string, fn: (deck: Deck) => Deck): void =>
@@ -60,7 +69,9 @@ export const useDecksStore = create<DecksState>((set, get) => {
       return deck
     },
 
-    updateDeck: (id, patch) =>
+    updateDeck: (id, patch) => {
+      // Clearing the back image (the "Remove" button) should also delete the file.
+      if ('back' in patch && !patch.back) cleanupCardImage(id, 'back')
       mutate(id, (deck) => {
         const next = { ...deck, ...patch }
         // If the structure changed, regenerate minor cards (preserving data).
@@ -69,9 +80,13 @@ export const useDecksStore = create<DecksState>((set, get) => {
           next.cards = [...majors, ...rebuildMinors(next)]
         }
         return next
-      }),
+      })
+    },
 
-    deleteDeck: (id) => set((s) => ({ decks: s.decks.filter((deck) => deck.id !== id) })),
+    deleteDeck: (id) => {
+      cleanupDeckImages(id)
+      set((s) => ({ decks: s.decks.filter((deck) => deck.id !== id) }))
+    },
 
     addMajor: (deckId) =>
       mutate(deckId, (deck) => {
@@ -81,27 +96,33 @@ export const useDecksStore = create<DecksState>((set, get) => {
         return { ...deck, cards: [...majors, ...minors] }
       }),
 
-    updateCard: (deckId, cardId, patch) =>
+    updateCard: (deckId, cardId, patch) => {
+      // Clearing a card's image (the "Remove" button) should also delete the file.
+      if ('image' in patch && !patch.image) cleanupCardImage(deckId, cardId)
       mutate(deckId, (deck) => ({
         ...deck,
         cards: deck.cards.map((c) => (c.id === cardId ? { ...c, ...patch } : c))
-      })),
+      }))
+    },
 
-    deleteCard: (deckId, cardId) =>
+    deleteCard: (deckId, cardId) => {
+      cleanupCardImage(deckId, cardId)
       mutate(deckId, (deck) => {
         const cards = deck.cards.filter((c) => c.id !== cardId)
         return { ...deck, cards: renumberMajors(cards) }
-      }),
+      })
+    },
 
     importCardImage: async (deckId, cardId, file) => {
-      const ext = file.name.split('.').pop() ?? 'png'
+      // Only treat the suffix as an extension when there actually is a dot.
+      const ext = file.name.includes('.') ? file.name.split('.').pop()! : 'png'
       const bytes = new Uint8Array(await file.arrayBuffer())
       const { filename } = await window.api.decks.saveImage(deckId, cardId, ext, bytes)
       get().updateCard(deckId, cardId, { image: filename })
     },
 
     importDeckBack: async (deckId, file) => {
-      const ext = file.name.split('.').pop() ?? 'png'
+      const ext = file.name.includes('.') ? file.name.split('.').pop()! : 'png'
       const bytes = new Uint8Array(await file.arrayBuffer())
       const { filename } = await window.api.decks.saveImage(deckId, 'back', ext, bytes)
       get().updateDeck(deckId, { back: filename })
