@@ -8,8 +8,8 @@ import { join } from 'path'
  * user gets immediate branded feedback instead of a few seconds of nothing.
  *
  * Deliberately dependency-free and self-contained (loads a static
- * `resources/splash.html`) — ported from taliesin. Corvath ships no logo image,
- * so the splash is purely typographic.
+ * `resources/splash.html`, which pulls in the app logo from the same folder)
+ * — ported from taliesin.
  */
 export function createSplashWindow(): BrowserWindow {
   const splash = new BrowserWindow({

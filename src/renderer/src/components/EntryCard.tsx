@@ -11,8 +11,11 @@ import {
   Tooltip,
   Typography
 } from '@mui/material'
+import { useState } from 'react'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import type { Deck, Entry, Orientation } from '../../../shared/types'
+import DrawCard from './DrawCard'
+import CardPreview from './CardPreview'
 
 interface EntryCardProps {
   entry: Entry
@@ -24,10 +27,14 @@ interface EntryCardProps {
 }
 
 export default function EntryCard({ entry, index, deck, onChange, onDelete }: EntryCardProps) {
+  const [previewOpen, setPreviewOpen] = useState(false)
   const cardNames = deck ? deck.cards.map((c) => c.name) : []
   const deckCard = deck?.cards.find((c) => c.name === entry.card) ?? null
   const reversedDisabled = !!deck && !deck.supportsReversed
   const isReversed = entry.orientation === 'reversed' && !reversedDisabled
+
+  const artUrl =
+    deck && deckCard?.image ? window.api.decks.imageUrl(deck.id, deckCard.image) : undefined
 
   const meaning = deckCard
     ? ((isReversed ? deckCard.meaningReversed || deckCard.meaning : deckCard.meaning) ?? '')
@@ -55,87 +62,123 @@ export default function EntryCard({ entry, index, deck, onChange, onDelete }: En
           </Tooltip>
         </Box>
 
-        <Stack spacing={2}>
-          <TextField
-            label="Topic"
-            value={entry.topic}
-            onChange={(e) => onChange({ topic: e.target.value })}
-            fullWidth
-            size="small"
-          />
-          <TextField
-            label="Question"
-            value={entry.question}
-            onChange={(e) => onChange({ question: e.target.value })}
-            fullWidth
-            size="small"
-          />
-
-          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-            {deck ? (
-              <Autocomplete
-                freeSolo
-                options={cardNames}
-                value={entry.card ?? ''}
-                onInputChange={(_e, value) => onChange({ card: value })}
-                sx={{ flexGrow: 1, minWidth: 220 }}
-                renderInput={(params) => <TextField {...params} label="Card drawn" size="small" />}
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+          {entry.card && (
+            <Box sx={{ flexShrink: 0, display: { xs: 'none', sm: 'block' }, pt: 0.5 }}>
+              <DrawCard
+                flipped
+                faceUrl={artUrl}
+                name={entry.card}
+                orientation={isReversed ? 'reversed' : undefined}
+                width={104}
+                height={166}
+                onClick={() => setPreviewOpen(true)}
               />
-            ) : (
-              <TextField
-                label="Card drawn"
-                value={entry.card ?? ''}
-                onChange={(e) => onChange({ card: e.target.value })}
-                size="small"
-                sx={{ flexGrow: 1, minWidth: 220 }}
-              />
-            )}
-
-            <ToggleButtonGroup
-              exclusive
+            </Box>
+          )}
+          <Stack spacing={2} sx={{ flexGrow: 1, minWidth: 0 }}>
+            <TextField
+              label="Topic"
+              value={entry.topic}
+              onChange={(e) => onChange({ topic: e.target.value })}
+              fullWidth
               size="small"
-              value={entry.orientation ?? null}
-              onChange={(_e, value: Orientation | null) =>
-                onChange({ orientation: value ?? undefined })
-              }
-              aria-label="orientation"
-            >
-              <ToggleButton value="upright" aria-label="upright">
-                Upright
-              </ToggleButton>
-              <Tooltip title={reversedDisabled ? 'This deck does not track reversed cards' : ''}>
-                <span>
-                  <ToggleButton value="reversed" aria-label="reversed" disabled={reversedDisabled}>
-                    Reversed
-                  </ToggleButton>
-                </span>
-              </Tooltip>
-            </ToggleButtonGroup>
-          </Box>
+            />
+            <TextField
+              label="Question"
+              value={entry.question}
+              onChange={(e) => onChange({ question: e.target.value })}
+              fullWidth
+              size="small"
+            />
 
-          <TextField
-            label="Meaning (from deck)"
-            value={meaning}
-            slotProps={{ input: { readOnly: true } }}
-            fullWidth
-            multiline
-            minRows={2}
-            size="small"
-            helperText={meaningHelp}
-          />
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+              {deck ? (
+                <Autocomplete
+                  freeSolo
+                  options={cardNames}
+                  value={entry.card ?? ''}
+                  onInputChange={(_e, value) => onChange({ card: value })}
+                  sx={{ flexGrow: 1, minWidth: 220 }}
+                  renderInput={(params) => (
+                    <TextField {...params} label="Card drawn" size="small" />
+                  )}
+                />
+              ) : (
+                <TextField
+                  label="Card drawn"
+                  value={entry.card ?? ''}
+                  onChange={(e) => onChange({ card: e.target.value })}
+                  size="small"
+                  sx={{ flexGrow: 1, minWidth: 220 }}
+                />
+              )}
 
-          <TextField
-            label="Notes"
-            placeholder="Your interpretation of this card…"
-            value={entry.notes ?? ''}
-            onChange={(e) => onChange({ notes: e.target.value })}
-            fullWidth
-            multiline
-            minRows={2}
-            size="small"
-          />
-        </Stack>
+              <ToggleButtonGroup
+                exclusive
+                size="small"
+                value={entry.orientation ?? null}
+                onChange={(_e, value: Orientation | null) =>
+                  onChange({ orientation: value ?? undefined })
+                }
+                aria-label="orientation"
+              >
+                <ToggleButton value="upright" aria-label="upright">
+                  Upright
+                </ToggleButton>
+                <Tooltip title={reversedDisabled ? 'This deck does not track reversed cards' : ''}>
+                  <span>
+                    <ToggleButton
+                      value="reversed"
+                      aria-label="reversed"
+                      disabled={reversedDisabled}
+                    >
+                      Reversed
+                    </ToggleButton>
+                  </span>
+                </Tooltip>
+              </ToggleButtonGroup>
+            </Box>
+
+            <TextField
+              label="Meaning (from deck)"
+              value={meaning}
+              slotProps={{ input: { readOnly: true } }}
+              fullWidth
+              multiline
+              minRows={2}
+              size="small"
+              helperText={meaningHelp}
+            />
+
+            <TextField
+              label="Notes"
+              placeholder="Your interpretation of this card…"
+              value={entry.notes ?? ''}
+              onChange={(e) => onChange({ notes: e.target.value })}
+              fullWidth
+              multiline
+              minRows={2}
+              size="small"
+            />
+          </Stack>
+        </Box>
       </CardContent>
+
+      <CardPreview
+        card={
+          previewOpen && entry.card
+            ? {
+                name: entry.card,
+                artUrl,
+                orientation: isReversed ? 'reversed' : undefined,
+                keywords: deckCard?.keywords,
+                meaning: meaning || undefined
+              }
+            : null
+        }
+        onClose={() => setPreviewOpen(false)}
+      />
     </Card>
   )
 }

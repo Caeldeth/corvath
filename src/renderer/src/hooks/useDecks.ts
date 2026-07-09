@@ -1,4 +1,4 @@
-import type { Deck, DeckCard } from '../../../shared/types'
+import type { Deck, DeckCard, DeckExportResult, DeckImportResult } from '../../../shared/types'
 import { useDecksStore } from '../store/decksStore'
 
 export interface UseDecks {
@@ -12,6 +12,8 @@ export interface UseDecks {
   deleteCard: (deckId: string, cardId: string) => void
   importCardImage: (deckId: string, cardId: string, file: File) => Promise<void>
   importDeckBack: (deckId: string, file: File) => Promise<void>
+  exportDeck: (deckId: string) => Promise<DeckExportResult>
+  importDeck: () => Promise<DeckImportResult>
 }
 
 /** Thin selector over the decks store (see useReadings for the rationale). */
@@ -26,7 +28,9 @@ export function useDecks(): UseDecks {
     updateCard,
     deleteCard,
     importCardImage,
-    importDeckBack
+    importDeckBack,
+    exportDeck,
+    importDeck
   } = useDecksStore.getState()
 
   return {
@@ -39,6 +43,8 @@ export function useDecks(): UseDecks {
     updateCard,
     deleteCard,
     importCardImage,
-    importDeckBack
+    importDeckBack,
+    exportDeck,
+    importDeck
   }
 }

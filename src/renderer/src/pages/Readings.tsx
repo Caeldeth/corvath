@@ -1,19 +1,40 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Box, Typography } from '@mui/material'
+import { Alert, Box, Button, Snackbar, Typography } from '@mui/material'
+import CasinoOutlinedIcon from '@mui/icons-material/CasinoOutlined'
 import type { Deck, Layout } from '../../../shared/types'
 import { useReadings } from '../hooks/useReadings'
+import { readingsToJson } from '../lib/exportReadings'
 import ReadingList from '../components/ReadingList'
 import ReadingEditor from '../components/ReadingEditor'
 import ImportDialog from '../components/ImportDialog'
+
+interface Toast {
+  message: string
+  severity: 'success' | 'error'
+}
+
+/** A filesystem-safe base name for an exported file. */
+const safeName = (s: string): string => s.trim().replace(/[^a-z0-9._-]+/gi, '_') || 'reading'
 
 interface ReadingsProps {
   /** Decks from the builder — for the deck field and card meanings. */
   decks: Deck[]
   /** Layouts from the builder, offered as spreads. */
   layouts: Layout[]
+  /** Selected reading id, lifted to App so the Draw tab can hand one off. */
+  selectedId: string | null
+  onSelectId: (id: string | null) => void
+  /** Switch to the Draw tab. */
+  onGoToDraw: () => void
 }
 
-export default function Readings({ decks, layouts }: ReadingsProps) {
+export default function Readings({
+  decks,
+  layouts,
+  selectedId,
+  onSelectId,
+  onGoToDraw
+}: ReadingsProps) {
   const {
     readings,
     loaded,
@@ -26,17 +47,17 @@ export default function Readings({ decks, layouts }: ReadingsProps) {
     applyLayout,
     importReadings
   } = useReadings()
-  const [selectedId, setSelectedId] = useState<string | null>(null)
   const [importOpen, setImportOpen] = useState(false)
+  const [toast, setToast] = useState<Toast | null>(null)
 
   useEffect(() => {
     if (!loaded) return
     if (selectedId && !readings.some((r) => r.id === selectedId)) {
-      setSelectedId(readings[0]?.id ?? null)
+      onSelectId(readings[0]?.id ?? null)
     } else if (!selectedId && readings.length > 0) {
-      setSelectedId(readings[0].id)
+      onSelectId(readings[0].id)
     }
-  }, [loaded, readings, selectedId])
+  }, [loaded, readings, selectedId, onSelectId])
 
   const selectedReading = useMemo(
     () => readings.find((r) => r.id === selectedId) ?? null,
@@ -45,13 +66,31 @@ export default function Readings({ decks, layouts }: ReadingsProps) {
 
   const handleCreate = (): void => {
     const reading = createReading()
-    setSelectedId(reading.id)
+    onSelectId(reading.id)
   }
 
   const handleImport = (imported: Parameters<typeof importReadings>[0]): void => {
     importReadings(imported)
     setImportOpen(false)
-    if (imported[0]) setSelectedId(imported[0].id)
+    if (imported[0]) onSelectId(imported[0].id)
+  }
+
+  const runExport = async (name: string, readingsToSave: typeof readings): Promise<void> => {
+    const result = await window.api.readings.export(name, readingsToJson(readingsToSave))
+    if (result.ok) {
+      setToast({ message: 'Readings exported.', severity: 'success' })
+    } else if (result.error) {
+      setToast({ message: result.error, severity: 'error' })
+    }
+  }
+
+  const handleExportOne = (id: string): void => {
+    const reading = readings.find((r) => r.id === id)
+    if (reading) void runExport(safeName(reading.title || 'reading'), [reading])
+  }
+
+  const handleExportAll = (): void => {
+    if (readings.length) void runExport('corvath-readings', readings)
   }
 
   return (
@@ -59,9 +98,12 @@ export default function Readings({ decks, layouts }: ReadingsProps) {
       <ReadingList
         readings={readings}
         selectedId={selectedId}
-        onSelect={setSelectedId}
+        onSelect={onSelectId}
         onCreate={handleCreate}
+        onDraw={onGoToDraw}
         onImport={() => setImportOpen(true)}
+        onExport={handleExportOne}
+        onExportAll={handleExportAll}
         onDelete={deleteReading}
       />
       {selectedReading ? (
@@ -77,10 +119,38 @@ export default function Readings({ decks, layouts }: ReadingsProps) {
           onDeleteEntry={(entryId) => deleteEntry(selectedReading.id, entryId)}
         />
       ) : (
-        <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Typography variant="body1" sx={{ opacity: 0.6 }}>
-            Select a reading, or create a new one.
-          </Typography>
+        <Box
+          sx={{
+            flexGrow: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 2,
+            textAlign: 'center',
+            p: 3
+          }}
+        >
+          {readings.length === 0 ? (
+            <>
+              <Typography variant="h6">Welcome to Corvath</Typography>
+              <Typography variant="body1" sx={{ opacity: 0.7, maxWidth: 420 }}>
+                Draw a reading in the app, enter one by hand, or import readings you already have.
+              </Typography>
+              <Button
+                variant="contained"
+                size="large"
+                startIcon={<CasinoOutlinedIcon />}
+                onClick={onGoToDraw}
+              >
+                Draw a Reading
+              </Button>
+            </>
+          ) : (
+            <Typography variant="body1" sx={{ opacity: 0.6 }}>
+              Select a reading, or create a new one.
+            </Typography>
+          )}
         </Box>
       )}
 
@@ -90,6 +160,24 @@ export default function Readings({ decks, layouts }: ReadingsProps) {
         onClose={() => setImportOpen(false)}
         onImport={handleImport}
       />
+
+      <Snackbar
+        open={!!toast}
+        autoHideDuration={4000}
+        onClose={() => setToast(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        {toast ? (
+          <Alert
+            severity={toast.severity}
+            variant="filled"
+            onClose={() => setToast(null)}
+            sx={{ width: '100%' }}
+          >
+            {toast.message}
+          </Alert>
+        ) : undefined}
+      </Snackbar>
     </Box>
   )
 }

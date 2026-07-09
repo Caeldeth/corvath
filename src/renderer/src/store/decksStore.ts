@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { Deck, DeckCard } from '../../../shared/types'
+import type { Deck, DeckCard, DeckExportResult, DeckImportResult } from '../../../shared/types'
 import { nowIso, rebuildMinors, renumberMajors, uid } from '../lib/deck'
 import { createDebouncedSaver } from './persist'
 
@@ -32,6 +32,10 @@ interface DecksState {
   deleteCard: (deckId: string, cardId: string) => void
   importCardImage: (deckId: string, cardId: string, file: File) => Promise<void>
   importDeckBack: (deckId: string, file: File) => Promise<void>
+  /** Export a deck to a `.corvathdeck` file (native save dialog). */
+  exportDeck: (deckId: string) => Promise<DeckExportResult>
+  /** Import a `.corvathdeck` file (native open dialog); adds it on success. */
+  importDeck: () => Promise<DeckImportResult>
 }
 
 let suppressNextSave = false
@@ -135,6 +139,21 @@ export const useDecksStore = create<DecksState>((set, get) => {
       const { filename } = await window.api.decks.saveImage(deckId, 'back', ext, bytes)
       const prev = get().decks.find((d) => d.id === deckId)
       get().updateDeck(deckId, { back: filename, backVersion: (prev?.backVersion ?? 0) + 1 })
+    },
+
+    exportDeck: (deckId) => {
+      const deck = get().decks.find((d) => d.id === deckId)
+      if (!deck) return Promise.resolve({ error: 'Deck not found.' })
+      return window.api.decks.exportDeck(deck)
+    },
+
+    importDeck: async () => {
+      const existingNames = get().decks.map((d) => d.name)
+      const result = await window.api.decks.importDeck(existingNames)
+      // Main writes the images and returns a ready-to-use deck; just add it. The
+      // debounced saver then persists decks.json with the new entry.
+      if (result.deck) set((s) => ({ decks: [...s.decks, result.deck!] }))
+      return result
     }
   }
 })

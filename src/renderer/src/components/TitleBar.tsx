@@ -9,7 +9,6 @@ import {
   Tooltip,
   Typography
 } from '@mui/material'
-import AutoStoriesIcon from '@mui/icons-material/AutoStories'
 import MinimizeIcon from '@mui/icons-material/Minimize'
 import CropSquareIcon from '@mui/icons-material/CropSquare'
 import FilterNoneIcon from '@mui/icons-material/FilterNone'
@@ -56,12 +55,17 @@ export default function TitleBar({ themeName, onThemeChange }: TitleBarProps) {
   return (
     <AppBar position="static" elevation={0} sx={{ WebkitAppRegion: 'drag', userSelect: 'none' }}>
       <Toolbar variant="dense" sx={{ minHeight: 40, px: 1.5 }}>
-        <AutoStoriesIcon sx={{ mr: 1.5, color: chromeFg }} />
+        <Box
+          component="img"
+          src={`${import.meta.env.BASE_URL}corvath.png`}
+          alt=""
+          sx={{ width: 22, height: 22, mr: 1.5, borderRadius: '4px', display: 'block' }}
+        />
         <Typography
           variant="h6"
           sx={{ fontSize: '1rem', letterSpacing: '0.14em', color: chromeFg }}
         >
-          Tarot Reading Recorder
+          Corvath Tarot
         </Typography>
 
         <Box sx={{ flexGrow: 1 }} />

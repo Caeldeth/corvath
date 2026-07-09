@@ -10,7 +10,9 @@ import {
   Typography
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
+import CasinoOutlinedIcon from '@mui/icons-material/CasinoOutlined'
 import FileUploadOutlinedIcon from '@mui/icons-material/FileUploadOutlined'
+import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import type { Reading } from '../../../shared/types'
 
@@ -19,7 +21,10 @@ interface ReadingListProps {
   selectedId: string | null
   onSelect: (id: string) => void
   onCreate: () => void
+  onDraw: () => void
   onImport: () => void
+  onExport: (id: string) => void
+  onExportAll: () => void
   onDelete: (id: string) => void
 }
 
@@ -28,7 +33,10 @@ export default function ReadingList({
   selectedId,
   onSelect,
   onCreate,
+  onDraw,
   onImport,
+  onExport,
+  onExportAll,
   onDelete
 }: ReadingListProps) {
   // Most recent reading date first.
@@ -47,19 +55,43 @@ export default function ReadingList({
       }}
     >
       <Box sx={{ p: 1.5, display: 'flex', flexDirection: 'column', gap: 1 }}>
-        <Button fullWidth variant="contained" startIcon={<AddIcon />} onClick={onCreate}>
+        <Button fullWidth variant="contained" startIcon={<CasinoOutlinedIcon />} onClick={onDraw}>
+          Draw a Reading
+        </Button>
+        <Button fullWidth startIcon={<AddIcon />} onClick={onCreate}>
           New Reading
         </Button>
-        <Button fullWidth startIcon={<FileUploadOutlinedIcon />} onClick={onImport}>
-          Import
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button
+            fullWidth
+            startIcon={<FileUploadOutlinedIcon />}
+            onClick={onImport}
+            sx={{ flex: 1 }}
+          >
+            Import
+          </Button>
+          <Button
+            fullWidth
+            startIcon={<FileDownloadOutlinedIcon />}
+            onClick={onExportAll}
+            disabled={readings.length === 0}
+            sx={{ flex: 1 }}
+          >
+            Export all
+          </Button>
+        </Box>
       </Box>
 
       <Box sx={{ flexGrow: 1, overflowY: 'auto' }}>
         {sorted.length === 0 ? (
-          <Typography variant="body2" sx={{ p: 2, opacity: 0.6 }}>
-            No readings yet. Create one to begin.
-          </Typography>
+          <Box sx={{ p: 3, textAlign: 'center' }}>
+            <Typography variant="body2" sx={{ mb: 2, opacity: 0.7 }}>
+              No readings yet. Draw your first reading to begin.
+            </Typography>
+            <Button variant="contained" startIcon={<CasinoOutlinedIcon />} onClick={onDraw}>
+              Draw a Reading
+            </Button>
+          </Box>
         ) : (
           <List disablePadding>
             {sorted.map((reading) => (
@@ -67,19 +99,34 @@ export default function ReadingList({
                 key={reading.id}
                 disablePadding
                 secondaryAction={
-                  <Tooltip title="Delete reading">
-                    <IconButton
-                      edge="end"
-                      size="small"
-                      aria-label="delete reading"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onDelete(reading.id)
-                      }}
-                    >
-                      <DeleteOutlineIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
+                  <Box sx={{ display: 'flex' }}>
+                    <Tooltip title="Export reading">
+                      <IconButton
+                        edge="end"
+                        size="small"
+                        aria-label="export reading"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onExport(reading.id)
+                        }}
+                      >
+                        <FileDownloadOutlinedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Delete reading">
+                      <IconButton
+                        edge="end"
+                        size="small"
+                        aria-label="delete reading"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onDelete(reading.id)
+                        }}
+                      >
+                        <DeleteOutlineIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
                 }
               >
                 <ListItemButton

@@ -1,5 +1,6 @@
-appId: com.hybrasyl.corvath
-productName: Tarot Reading Recorder
+appId: co.eris.corvath
+productName: Corvath Tarot
+icon: resources/corvath.png
 directories:
   buildResources: build
 files:
@@ -12,10 +13,14 @@ asarUnpack:
   - bundled/**
 win:
   executableName: corvath
+  # 1.0 ships a single portable exe. Re-enable nsis (and add mac/linux) later by
+  # adding entries here — the nsis block below is kept ready for that.
   target:
-    - target: nsis
+    - target: portable
       arch:
         - x64
+portable:
+  artifactName: ${name}-${version}-portable.${ext}
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}

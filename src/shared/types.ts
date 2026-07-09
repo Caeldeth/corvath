@@ -19,9 +19,16 @@ export interface Entry {
 
 /**
  * How a reading was produced: `manual` (entered by hand via "New Reading")
- * or `corvath` (drawn within the app — a future feature).
+ * or `corvath` (drawn within the app).
  */
 export type ReadingSource = 'manual' | 'corvath'
+
+/**
+ * How a `corvath` draw dealt its cards:
+ * - `deal` — shuffled, then dealt off the top (honoring each position's top/bottom source);
+ * - `fan` — cards fanned face-down, one picked per slot.
+ */
+export type DrawMode = 'deal' | 'fan'
 
 /** A reading session: one deck, a date, and a list of entries. */
 export interface Reading {
@@ -33,6 +40,10 @@ export interface Reading {
   deck: string
   /** Where the reading came from; defaults to 'manual' for older readings. */
   source?: ReadingSource
+  /** RNG seed used to shuffle the deck (present on `corvath` draws, for reproducibility). */
+  seed?: number
+  /** How a `corvath` draw dealt its cards. */
+  drawMode?: DrawMode
   /** Layout/spread applied to this reading, if any. */
   layoutId?: string
   layoutName?: string
@@ -141,11 +152,50 @@ export interface SavedImage {
   filename: string
 }
 
+/** Result of exporting a deck to a `.corvathdeck` file. */
+export interface DeckExportResult {
+  ok?: boolean
+  /** User dismissed the save dialog. */
+  canceled?: boolean
+  /** Path written to, on success. */
+  path?: string
+  error?: string
+}
+
+/** Result of importing a `.corvathdeck` file. */
+export interface DeckImportResult {
+  /** The freshly-created user deck (new id + unique name), on success. */
+  deck?: Deck
+  /** User dismissed the open dialog. */
+  canceled?: boolean
+  error?: string
+}
+
+/** Result of exporting one or more readings to a `.json` file. */
+export interface ReadingExportResult {
+  ok?: boolean
+  /** User dismissed the save dialog. */
+  canceled?: boolean
+  /** Path written to, on success. */
+  path?: string
+  error?: string
+}
+
+/** A newer release advertised to the renderer (notification only — no auto-download). */
+export interface UpdateInfo {
+  /** Version of the latest release (tag without a leading `v`). */
+  version: string
+  /** Release page to open in the browser. */
+  url: string
+}
+
 /** The surface exposed to the renderer on `window.api`. */
 export interface TarotApi {
   readings: {
     getAll(): Promise<Reading[]>
     save(readings: Reading[]): Promise<void>
+    /** Prompt for a destination and write the given JSON (one or more readings). */
+    export(defaultName: string, json: string): Promise<ReadingExportResult>
   }
   decks: {
     getAll(): Promise<Deck[]>
@@ -158,6 +208,11 @@ export interface TarotApi {
     deleteDeckImages(deckId: string): Promise<void>
     /** Build the `corvath-asset://` URL for a stored image (cache-busted). */
     imageUrl(deckId: string, filename: string): string
+    /** Prompt for a destination and export the deck (+ images) as a `.corvathdeck`. */
+    exportDeck(deck: Deck): Promise<DeckExportResult>
+    /** Prompt for a `.corvathdeck` and import it as a new user deck. `existingNames`
+     * lets the importer pick a non-colliding name. */
+    importDeck(existingNames: string[]): Promise<DeckImportResult>
   }
   layouts: {
     getAll(): Promise<Layout[]>
@@ -167,5 +222,7 @@ export interface TarotApi {
   saveSettings(settings: Settings): Promise<void>
   /** Signal the main process that the renderer has hydrated; reveals the window. */
   appReady(): void
+  /** Subscribe to an available-update notification; returns an unsubscribe function. */
+  onUpdateAvailable(callback: (info: UpdateInfo) => void): () => void
   window: WindowControls
 }
