@@ -54,7 +54,11 @@ async function handleAssetRequest(request: Request): Promise<Response> {
     try {
       const data = await readFile(filePath)
       const mime = IMAGE_MIME[extname(filePath).toLowerCase()] ?? 'application/octet-stream'
-      return new Response(new Uint8Array(data), { headers: { 'content-type': mime } })
+      // no-cache: Chromium revalidates instead of hard-caching, so a replaced
+      // image (same URL, unchanged version) still refreshes.
+      return new Response(new Uint8Array(data), {
+        headers: { 'content-type': mime, 'cache-control': 'no-cache' }
+      })
     } catch {
       /* try next candidate */
     }

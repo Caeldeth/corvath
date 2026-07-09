@@ -41,7 +41,7 @@ export default function DeckEditor({
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const backFileRef = useRef<HTMLInputElement>(null)
   const backSrc = deck.back
-    ? `${window.api.decks.imageUrl(deck.id, deck.back)}?v=${encodeURIComponent(deck.updatedAt)}`
+    ? `${window.api.decks.imageUrl(deck.id, deck.back)}?v=${deck.backVersion ?? 0}`
     : null
   const selected = deck.cards.find((c) => c.id === selectedId) ?? null
   const majors = majorsOf(deck)

@@ -79,6 +79,7 @@ const deckCardSchema = z.object({
   suit: z.string().optional(),
   rank: z.string().optional(),
   image: z.string().optional(),
+  imageVersion: z.number().optional(),
   keywords: z.array(z.string()).optional(),
   meaning: z.string().optional(),
   meaningReversed: z.string().optional()
@@ -95,6 +96,7 @@ export const deckSchema: z.ZodType<Deck> = z.object({
   courtRanks: z.array(z.string()),
   supportsReversed: z.boolean(),
   back: z.string().optional(),
+  backVersion: z.number().optional(),
   cards: z.array(deckCardSchema),
   createdAt: z.string(),
   updatedAt: z.string()

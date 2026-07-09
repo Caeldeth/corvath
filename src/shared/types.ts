@@ -91,6 +91,8 @@ export interface DeckCard {
   rank?: string
   /** Imported image filename, relative to the deck's image folder. */
   image?: string
+  /** Bumped each time the card's image is (re)imported, for per-image cache-busting. */
+  imageVersion?: number
   keywords?: string[]
   meaning?: string
   meaningReversed?: string
@@ -116,6 +118,8 @@ export interface Deck {
   supportsReversed: boolean
   /** Optional card-back image filename (served like card images). */
   back?: string
+  /** Bumped each time the back image is (re)imported, for per-image cache-busting. */
+  backVersion?: number
   cards: DeckCard[]
   createdAt: string
   updatedAt: string

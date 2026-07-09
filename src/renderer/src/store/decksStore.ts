@@ -118,14 +118,23 @@ export const useDecksStore = create<DecksState>((set, get) => {
       const ext = file.name.includes('.') ? file.name.split('.').pop()! : 'png'
       const bytes = new Uint8Array(await file.arrayBuffer())
       const { filename } = await window.api.decks.saveImage(deckId, cardId, ext, bytes)
-      get().updateCard(deckId, cardId, { image: filename })
+      // Bump only this card's version so its URL cache-busts without re-fetching
+      // every other card's image (see CardThumb/CardEditor).
+      const prev = get()
+        .decks.find((d) => d.id === deckId)
+        ?.cards.find((c) => c.id === cardId)
+      get().updateCard(deckId, cardId, {
+        image: filename,
+        imageVersion: (prev?.imageVersion ?? 0) + 1
+      })
     },
 
     importDeckBack: async (deckId, file) => {
       const ext = file.name.includes('.') ? file.name.split('.').pop()! : 'png'
       const bytes = new Uint8Array(await file.arrayBuffer())
       const { filename } = await window.api.decks.saveImage(deckId, 'back', ext, bytes)
-      get().updateDeck(deckId, { back: filename })
+      const prev = get().decks.find((d) => d.id === deckId)
+      get().updateDeck(deckId, { back: filename, backVersion: (prev?.backVersion ?? 0) + 1 })
     }
   }
 })

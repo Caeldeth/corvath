@@ -10,7 +10,7 @@ interface CardThumbProps {
 
 export default function CardThumb({ deck, card, onClick }: CardThumbProps) {
   const imageSrc = card.image
-    ? `${window.api.decks.imageUrl(deck.id, card.image)}?v=${encodeURIComponent(deck.updatedAt)}`
+    ? `${window.api.decks.imageUrl(deck.id, card.image)}?v=${card.imageVersion ?? 0}`
     : cardPlaceholderDataUrl(card.name)
   const hasMeaning = !!(card.meaning && card.meaning.trim())
 
