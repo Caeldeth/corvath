@@ -1,5 +1,6 @@
-appId: com.hybrasyl.corvath
-productName: Tarot Reading Recorder
+appId: co.eris.corvath
+productName: Corvath Tarot
+icon: resources/corvath.png
 directories:
   buildResources: build
 files:

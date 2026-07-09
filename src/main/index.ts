@@ -1,19 +1,46 @@
-import { app, shell, BrowserWindow, ipcMain, protocol } from 'electron'
+import { app, shell, BrowserWindow, dialog, ipcMain, protocol } from 'electron'
 import { join, extname } from 'path'
 import { readFile } from 'fs/promises'
+import { existsSync, mkdirSync, renameSync } from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import icon from '../../resources/corvath.png?asset'
 import { createStores } from './store'
 import { createSplashWindow } from './splash'
 import { registerHandlers } from './handlers'
 
-// Roaming settings + readings + decks live in %APPDATA%/Themisco/Corvath; the
-// disposable cache (userData) goes in %LOCALAPPDATA%/Themisco/Corvath. Electron
+// Roaming settings + readings + decks live in %APPDATA%/Eriscorp/Corvath; the
+// disposable cache (userData) goes in %LOCALAPPDATA%/Eriscorp/Corvath. Electron
 // dropped getPath('cache'), so we resolve LOCALAPPDATA ourselves (mirrors taliesin).
-const COMPANY = 'Themisco'
+const COMPANY = 'Eriscorp'
+// Pre-1.0 builds stored data under the Themisco company dir; migrate it once.
+const LEGACY_COMPANY = 'Themisco'
 const APP_DIR = 'Corvath'
-const dataPath = join(app.getPath('appData'), COMPANY, APP_DIR)
 const localAppData = process.env.LOCALAPPDATA ?? join(app.getPath('home'), 'AppData', 'Local')
-app.setPath('userData', join(localAppData, COMPANY, APP_DIR))
+
+/**
+ * One-time move of a pre-1.0 data directory from the old company folder to the
+ * new one. Runs before the stores open. Only migrates when the new location is
+ * absent and the legacy one exists, so it never clobbers current data and is a
+ * no-op on every subsequent launch. Best-effort: a failure leaves the legacy
+ * copy in place and the app simply starts fresh rather than crashing.
+ */
+function migrateLegacyDir(legacyDir: string, newDir: string): void {
+  if (existsSync(newDir) || !existsSync(legacyDir)) return
+  try {
+    mkdirSync(join(newDir, '..'), { recursive: true })
+    renameSync(legacyDir, newDir)
+    console.log(`Migrated data: ${legacyDir} -> ${newDir}`)
+  } catch (err) {
+    console.error('Legacy data migration failed (starting fresh):', err)
+  }
+}
+
+const dataPath = join(app.getPath('appData'), COMPANY, APP_DIR)
+migrateLegacyDir(join(app.getPath('appData'), LEGACY_COMPANY, APP_DIR), dataPath)
+
+const userDataPath = join(localAppData, COMPANY, APP_DIR)
+migrateLegacyDir(join(localAppData, LEGACY_COMPANY, APP_DIR), userDataPath)
+app.setPath('userData', userDataPath)
 
 // Bundled (shipped) deck art lives in <appRoot>/bundled/decks/<deckId>/.
 // __dirname is out/main in dev and inside the asar in production; both resolve
@@ -92,7 +119,8 @@ function createWindow(): void {
     show: false,
     autoHideMenuBar: true,
     frame: false,
-    title: 'Tarot Reading Recorder',
+    icon,
+    title: 'Corvath Tarot',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false
@@ -118,7 +146,7 @@ function createWindow(): void {
 }
 
 app.whenReady().then(async () => {
-  electronApp.setAppUserModelId('com.hybrasyl.corvath')
+  electronApp.setAppUserModelId('co.eris.corvath')
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
@@ -137,7 +165,7 @@ app.whenReady().then(async () => {
   // All IPC channels (data persistence, image import/cleanup, window controls,
   // and the app:ready reveal handshake) live in handlers.ts. Reveal has a 15 s
   // backstop in case the renderer never signals.
-  registerHandlers({ ipcMain, BrowserWindow }, { store, onAppReady: revealMainWindow })
+  registerHandlers({ ipcMain, BrowserWindow, dialog }, { store, onAppReady: revealMainWindow })
   setTimeout(revealMainWindow, 15000)
 
   createWindow()

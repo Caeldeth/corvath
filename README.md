@@ -1,4 +1,4 @@
-# Corvath — Tarot Reading Recorder
+# Corvath Tarot
 
 A small Electron desktop app for recording tarot readings. Each **reading** is a session
 (title, date, deck, optional spread) containing a list of **cards** — each with a topic, a
@@ -29,14 +29,14 @@ Built with **electron-vite + React + TypeScript + MUI**, sharing the Hybrasyl th
 ## Stack
 
 - electron-vite (`src/main`, `src/preload`, `src/renderer`)
-- React 18 + TypeScript
-- MUI v7 with the four shared themes (`src/renderer/src/themes`)
+- React 19 + TypeScript
+- MUI v9 with the shared Hybrasyl themes (`src/renderer/src/themes`)
 - Cinzel / Cinzel Decorative / Crimson Pro fonts via `@fontsource`
 
 ## Data
 
 Readings, decks, and settings are stored as JSON in the roaming app-data
-directory, `%APPDATA%/Themisco/Corvath/` on Windows:
+directory, `%APPDATA%/Eriscorp/Corvath/` on Windows:
 
 - `readings.json` — `{ version: 1, readings: Reading[] }`
 - `decks.json` — `{ version: 1, decks: Deck[] }`
@@ -50,7 +50,10 @@ renamed over the primary, the previous version is rotated to a `.bak.json`, and
 a corrupt primary is automatically recovered from its backup on next load.
 
 Disposable cache (Electron `userData`) lives separately in
-`%LOCALAPPDATA%/Themisco/Corvath/`.
+`%LOCALAPPDATA%/Eriscorp/Corvath/`.
+
+Pre-1.0 builds stored this data under a `Themisco/` company folder; on first
+launch the app moves it to `Eriscorp/` automatically (a one-time migration).
 
 ## Scripts
 

@@ -36,9 +36,10 @@
         color: #f0e6cc;
       }
       .glyph {
-        width: 72px;
-        height: 72px;
-        filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.5));
+        width: 84px;
+        height: 84px;
+        border-radius: 14px;
+        filter: drop-shadow(0 2px 10px rgba(0, 0, 0, 0.6));
       }
       .title {
         font-size: 24px;
@@ -70,29 +71,10 @@
   </head>
   <body>
     <div class="card">
-      <!-- A simple tarot-ish sun/star motif, inline so no asset is needed. -->
-      <svg
-        class="glyph"
-        viewBox="0 0 100 100"
-        fill="none"
-        stroke="#f0e6cc"
-        stroke-width="3"
-        stroke-linecap="round"
-      >
-        <circle cx="50" cy="50" r="18" stroke="#3a9e90" />
-        <g stroke="#f0e6cc">
-          <line x1="50" y1="8" x2="50" y2="24" />
-          <line x1="50" y1="76" x2="50" y2="92" />
-          <line x1="8" y1="50" x2="24" y2="50" />
-          <line x1="76" y1="50" x2="92" y2="50" />
-          <line x1="20" y1="20" x2="31" y2="31" />
-          <line x1="69" y1="69" x2="80" y2="80" />
-          <line x1="80" y1="20" x2="69" y2="31" />
-          <line x1="31" y1="69" x2="20" y2="80" />
-        </g>
-      </svg>
+      <!-- Loaded from resources/ alongside this file, so it resolves under file:// too. -->
+      <img class="glyph" src="corvath.png" alt="" />
       <div class="title">CORVATH</div>
-      <div class="subtitle">Tarot Reading Recorder</div>
+      <div class="subtitle">Tarot</div>
       <div class="spinner"></div>
     </div>
   </body>
