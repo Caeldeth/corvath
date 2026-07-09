@@ -44,12 +44,7 @@ const api: TarotApi = {
   }
 }
 
-if (process.contextIsolated) {
-  contextBridge.exposeInMainWorld('electron', electronAPI)
-  contextBridge.exposeInMainWorld('api', api)
-} else {
-  // @ts-ignore (define types in env.d.ts)
-  window.electron = electronAPI
-  // @ts-ignore (define types in env.d.ts)
-  window.api = api
-}
+// We always run with contextIsolation: true (the BrowserWindow default), so the
+// non-isolated fallback some templates ship with is dead code here.
+contextBridge.exposeInMainWorld('electron', electronAPI)
+contextBridge.exposeInMainWorld('api', api)
