@@ -109,7 +109,11 @@ export default function DeckEditor({
               {deck.back ? 'Replace back' : 'Set card back'}
             </Button>
             {deck.back && (
-              <Button size="small" color="inherit" onClick={() => onUpdateDeck({ back: undefined })}>
+              <Button
+                size="small"
+                color="inherit"
+                onClick={() => onUpdateDeck({ back: undefined })}
+              >
                 Remove
               </Button>
             )}
@@ -159,7 +163,12 @@ export default function DeckEditor({
         <Divider>Major Arcana ({majors.length})</Divider>
         <Box sx={gridSx}>
           {majors.map((card) => (
-            <CardThumb key={card.id} deck={deck} card={card} onClick={() => setSelectedId(card.id)} />
+            <CardThumb
+              key={card.id}
+              deck={deck}
+              card={card}
+              onClick={() => setSelectedId(card.id)}
+            />
           ))}
           <Button
             variant="outlined"

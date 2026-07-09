@@ -124,14 +124,13 @@ export default function ImportDialog({ open, layouts, onClose, onImport }: Impor
                 Provide a single reading object or an array of them.
                 <Box component="ul" sx={{ mt: 0.5, mb: 1, pl: 2 }}>
                   <li>
-                    <strong>title</strong> (required), <strong>date</strong> (required,
-                    YYYY-MM-DD).
+                    <strong>title</strong> (required), <strong>date</strong> (required, YYYY-MM-DD).
                   </li>
                   <li>
-                    <strong>entries</strong> (required, ≥ 1). Each entry needs{' '}
-                    <strong>card</strong>; optional <strong>topic</strong>,{' '}
-                    <strong>question</strong>, <strong>orientation</strong> (&quot;upright&quot; or
-                    &quot;reversed&quot;), and <strong>notes</strong> (per-card interpretation).
+                    <strong>entries</strong> (required, ≥ 1). Each entry needs <strong>card</strong>
+                    ; optional <strong>topic</strong>, <strong>question</strong>,{' '}
+                    <strong>orientation</strong> (&quot;upright&quot; or &quot;reversed&quot;), and{' '}
+                    <strong>notes</strong> (per-card interpretation).
                   </li>
                   <li>
                     Optional: <strong>deck</strong> (name), <strong>layout</strong> (name — must

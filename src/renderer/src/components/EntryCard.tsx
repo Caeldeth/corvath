@@ -30,7 +30,7 @@ export default function EntryCard({ entry, index, deck, onChange, onDelete }: En
   const isReversed = entry.orientation === 'reversed' && !reversedDisabled
 
   const meaning = deckCard
-    ? (isReversed ? deckCard.meaningReversed || deckCard.meaning : deckCard.meaning) ?? ''
+    ? ((isReversed ? deckCard.meaningReversed || deckCard.meaning : deckCard.meaning) ?? '')
     : ''
 
   const meaningHelp = !deck

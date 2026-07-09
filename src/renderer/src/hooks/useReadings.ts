@@ -74,9 +74,7 @@ export function useReadings(): UseReadings {
   const addEntry = useCallback((readingId: string): void => {
     setReadings((prev) =>
       prev.map((r) =>
-        r.id === readingId
-          ? { ...r, entries: [...r.entries, newEntry()], updatedAt: nowIso() }
-          : r
+        r.id === readingId ? { ...r, entries: [...r.entries, newEntry()], updatedAt: nowIso() } : r
       )
     )
   }, [])

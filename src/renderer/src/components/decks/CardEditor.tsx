@@ -119,7 +119,11 @@ export default function CardEditor({
                   {card.image ? 'Replace image' : 'Import image'}
                 </Button>
                 {card.image && (
-                  <Button size="small" color="inherit" onClick={() => onChange({ image: undefined })}>
+                  <Button
+                    size="small"
+                    color="inherit"
+                    onClick={() => onChange({ image: undefined })}
+                  >
                     Remove
                   </Button>
                 )}

@@ -1,5 +1,14 @@
 import { useEffect, useState } from 'react'
-import { AppBar, Box, IconButton, MenuItem, Select, Toolbar, Tooltip, Typography } from '@mui/material'
+import {
+  AppBar,
+  Box,
+  IconButton,
+  MenuItem,
+  Select,
+  Toolbar,
+  Tooltip,
+  Typography
+} from '@mui/material'
 import AutoStoriesIcon from '@mui/icons-material/AutoStories'
 import MinimizeIcon from '@mui/icons-material/Minimize'
 import CropSquareIcon from '@mui/icons-material/CropSquare'

@@ -34,8 +34,18 @@ function isObject(value: unknown): value is Record<string, unknown> {
 }
 
 /** Keep only filesystem-safe characters so renderer-supplied ids can't escape the data dir. */
-function safeSegment(value: string): string {
+export function safeSegment(value: string): string {
   return value.replace(/[^a-zA-Z0-9._-]/g, '')
+}
+
+/**
+ * Resolve `<root>/<deckId>/<filename>` and confirm the result stays inside
+ * `root`, returning null if it escapes. Both segments are `safeSegment`-cleaned
+ * first, so this is defence-in-depth against path traversal.
+ */
+export function resolveWithin(root: string, deckId: string, filename: string): string | null {
+  const target = resolve(root, safeSegment(deckId), safeSegment(filename))
+  return target.startsWith(resolve(root)) ? target : null
 }
 
 export interface Stores {
@@ -141,11 +151,6 @@ export function createStores(dir: string, bundledDecksDir: string): Stores {
     const filename = `${safeCard}.${safeExt}`
     await fs.writeFile(join(deckDir, filename), data)
     return filename
-  }
-
-  function resolveWithin(root: string, deckId: string, filename: string): string | null {
-    const target = resolve(root, safeSegment(deckId), safeSegment(filename))
-    return target.startsWith(resolve(root)) ? target : null
   }
 
   const resolveImagePath = (deckId: string, filename: string): string | null =>

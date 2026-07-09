@@ -20,7 +20,13 @@ interface DeckListProps {
   onDelete: (id: string) => void
 }
 
-export default function DeckList({ decks, selectedId, onSelect, onCreate, onDelete }: DeckListProps) {
+export default function DeckList({
+  decks,
+  selectedId,
+  onSelect,
+  onCreate,
+  onDelete
+}: DeckListProps) {
   return (
     <Box
       sx={{
