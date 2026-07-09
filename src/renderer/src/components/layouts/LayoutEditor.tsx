@@ -15,7 +15,7 @@ import {
   Typography
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import type { DeckSource, Layout, LayoutPosition } from '../../../../shared/types'
 import LayoutBoard from './LayoutBoard'
 

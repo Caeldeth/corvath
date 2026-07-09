@@ -9,7 +9,7 @@ import {
   Tooltip
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import type { Layout } from '../../../../shared/types'
 
 interface LayoutListProps {
@@ -75,8 +75,10 @@ export default function LayoutList({
                   secondary={`${layout.positions.length} position${
                     layout.positions.length === 1 ? '' : 's'
                   }`}
-                  primaryTypographyProps={{ noWrap: true }}
-                  secondaryTypographyProps={{ noWrap: true, fontSize: '0.7rem' }}
+                  slotProps={{
+                    primary: { noWrap: true },
+                    secondary: { noWrap: true, sx: { fontSize: '0.7rem' } }
+                  }}
                 />
               </ListItemButton>
             </ListItem>

@@ -11,7 +11,7 @@ import {
   Tooltip,
   Typography
 } from '@mui/material'
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import type { Deck, Entry, Orientation } from '../../../shared/types'
 
 interface EntryCardProps {
@@ -116,7 +116,7 @@ export default function EntryCard({ entry, index, deck, onChange, onDelete }: En
           <TextField
             label="Meaning (from deck)"
             value={meaning}
-            InputProps={{ readOnly: true }}
+            slotProps={{ input: { readOnly: true } }}
             fullWidth
             multiline
             minRows={2}

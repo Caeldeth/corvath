@@ -12,7 +12,7 @@ import {
   Typography
 } from '@mui/material'
 import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined'
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import type { Deck, DeckCard } from '../../../../shared/types'
 import { cardPlaceholderDataUrl } from '../../lib/cardPlaceholder'
 

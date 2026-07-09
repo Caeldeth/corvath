@@ -84,7 +84,7 @@ export default function ReadingEditor({
             type="date"
             value={reading.date}
             onChange={(e) => onChange({ date: e.target.value })}
-            InputLabelProps={{ shrink: true }}
+            slotProps={{ inputLabel: { shrink: true } }}
             sx={{ flex: '1 1 180px' }}
           />
           <Autocomplete

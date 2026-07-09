@@ -9,7 +9,7 @@ import {
   Tooltip
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import type { Deck } from '../../../../shared/types'
 
 interface DeckListProps {
@@ -70,8 +70,10 @@ export default function DeckList({
                 <ListItemText
                   primary={deck.name || 'Untitled Deck'}
                   secondary={`${deck.cards.length} card${deck.cards.length === 1 ? '' : 's'}`}
-                  primaryTypographyProps={{ noWrap: true }}
-                  secondaryTypographyProps={{ noWrap: true, fontSize: '0.7rem' }}
+                  slotProps={{
+                    primary: { noWrap: true },
+                    secondary: { noWrap: true, sx: { fontSize: '0.7rem' } }
+                  }}
                 />
               </ListItemButton>
             </ListItem>
