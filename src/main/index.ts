@@ -1,7 +1,6 @@
 import { app, shell, BrowserWindow, dialog, ipcMain, protocol } from 'electron'
 import { join, extname } from 'path'
 import { readFile } from 'fs/promises'
-import { existsSync, mkdirSync, renameSync } from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/corvath.png?asset'
 import { createStores } from './store'
@@ -9,39 +8,19 @@ import { createSplashWindow } from './splash'
 import { registerHandlers } from './handlers'
 import { checkForUpdate } from './updateCheck'
 
-// Roaming settings + readings + decks live in %APPDATA%/Eriscorp/Corvath; the
-// disposable cache (userData) goes in %LOCALAPPDATA%/Eriscorp/Corvath. Electron
-// dropped getPath('cache'), so we resolve LOCALAPPDATA ourselves (mirrors taliesin).
-const COMPANY = 'Eriscorp'
-// Pre-1.0 builds stored data under the Themisco company dir; migrate it once.
-const LEGACY_COMPANY = 'Themisco'
+// Everything — readings, decks, settings, and the disposable Electron cache —
+// lives under %LOCALAPPDATA%/Erisco/Corvath. On Windows Electron's appData path
+// is the ROAMING dir, so we resolve %LOCALAPPDATA% ourselves; macOS/Linux have no
+// roaming concept and appData is already local (mirrors hyb-electron-template).
+const COMPANY = 'Erisco'
 const APP_DIR = 'Corvath'
-const localAppData = process.env.LOCALAPPDATA ?? join(app.getPath('home'), 'AppData', 'Local')
+const localAppData =
+  process.platform === 'win32'
+    ? (process.env.LOCALAPPDATA ?? join(app.getPath('home'), 'AppData', 'Local'))
+    : app.getPath('appData')
 
-/**
- * One-time move of a pre-1.0 data directory from the old company folder to the
- * new one. Runs before the stores open. Only migrates when the new location is
- * absent and the legacy one exists, so it never clobbers current data and is a
- * no-op on every subsequent launch. Best-effort: a failure leaves the legacy
- * copy in place and the app simply starts fresh rather than crashing.
- */
-function migrateLegacyDir(legacyDir: string, newDir: string): void {
-  if (existsSync(newDir) || !existsSync(legacyDir)) return
-  try {
-    mkdirSync(join(newDir, '..'), { recursive: true })
-    renameSync(legacyDir, newDir)
-    console.log(`Migrated data: ${legacyDir} -> ${newDir}`)
-  } catch (err) {
-    console.error('Legacy data migration failed (starting fresh):', err)
-  }
-}
-
-const dataPath = join(app.getPath('appData'), COMPANY, APP_DIR)
-migrateLegacyDir(join(app.getPath('appData'), LEGACY_COMPANY, APP_DIR), dataPath)
-
-const userDataPath = join(localAppData, COMPANY, APP_DIR)
-migrateLegacyDir(join(localAppData, LEGACY_COMPANY, APP_DIR), userDataPath)
-app.setPath('userData', userDataPath)
+const dataPath = join(localAppData, COMPANY, APP_DIR)
+app.setPath('userData', dataPath)
 
 // Bundled (shipped) deck art lives in <appRoot>/bundled/decks/<deckId>/.
 // __dirname is out/main in dev and inside the asar in production; both resolve

@@ -1,22 +1,17 @@
 # Corvath — Road to 1.0
 
 Status snapshot: `v0.1.0`, `productName: "Tarot Reading Recorder"`. Branding decided:
-**Eriscorp** (`co.eris.*`, data under `Eriscorp/`).
+**Erisco** (`co.eris.*`, data under `Erisco/`).
 
-## A. Branding & identity — DECIDED: Eriscorp ✅ DONE
+## A. Branding & identity — DECIDED: Erisco ✅ DONE
 
 - [x] `appId: co.eris.corvath` in `electron-builder.yml`.
 - [x] `setAppUserModelId('co.eris.corvath')` in `src/main/index.ts`.
-- [x] `COMPANY = 'Eriscorp'` (roaming + userData both repointed).
-- [x] ⚠️ **Migration**: `migrateLegacyDir()` moves `Themisco/Corvath → Eriscorp/Corvath` on
-      first launch (both APPDATA + LOCALAPPDATA), only when the new dir is absent — never
-      clobbers current data, no-op thereafter, best-effort on failure. Moves the whole tree
-      (json files + `decks/` images + backups) via a single `renameSync`.
+- [x] `COMPANY = 'Erisco'` — all data (readings/decks/settings + Electron cache) under a
+      single `%LOCALAPPDATA%/Erisco/Corvath`; nothing in roaming (`%APPDATA%`).
 - [x] `productName` → "Corvath Tarot"; window title + in-app title + splash subtitle updated.
 - [x] Bumped version to `1.0.0`.
-- [x] README refreshed (React 19 / MUI v9, `Eriscorp/Corvath` paths, migration note).
-- [ ] Follow-up: verify the migration on a real machine that has pre-1.0 `Themisco/Corvath`
-      data (dev runs use dev userData, so this path isn't exercised by `npm run dev`).
+- [x] README refreshed (React 19 / MUI v9, `Erisco/Corvath` local paths).
 
 ## B. App icon
 
