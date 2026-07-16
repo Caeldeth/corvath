@@ -355,7 +355,7 @@ export default function Draw({ decks, layouts, onDone }: DrawProps): ReactElemen
   }
 
   const renderSetup = (): ReactElement => (
-    <Stack spacing={2.5} sx={{ maxWidth: 620, mx: 'auto', width: '100%' }}>
+    <Stack spacing={2.5} sx={{ maxWidth: 1100, mx: 'auto', width: '100%' }}>
       <Typography variant="h5">Draw a Reading</Typography>
       <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
         <TextField

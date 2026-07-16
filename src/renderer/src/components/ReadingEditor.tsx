@@ -61,7 +61,7 @@ export default function ReadingEditor({
 
   return (
     <Box sx={{ flexGrow: 1, height: '100%', overflowY: 'auto', p: 3 }}>
-      <Stack spacing={2.5} sx={{ maxWidth: 760, mx: 'auto' }}>
+      <Stack spacing={2.5} sx={{ maxWidth: 1200, mx: 'auto' }}>
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
           <TextField
             label="Title"

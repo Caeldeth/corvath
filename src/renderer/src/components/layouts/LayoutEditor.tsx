@@ -40,7 +40,7 @@ export default function LayoutEditor({
 
   return (
     <Box sx={{ flexGrow: 1, height: '100%', overflowY: 'auto', p: 3 }}>
-      <Stack spacing={2.5} sx={{ maxWidth: 900, mx: 'auto' }}>
+      <Stack spacing={2.5} sx={{ maxWidth: 1400, mx: 'auto' }}>
         <TextField
           label="Layout name"
           value={layout.name}
