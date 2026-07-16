@@ -1,7 +1,13 @@
 # Corvath — Road to 1.0
 
-Status snapshot: `v0.1.0`, `productName: "Tarot Reading Recorder"`. Branding decided:
-**Erisco** (`co.eris.*`, data under `Erisco/`).
+Status snapshot: `package.json` is at `1.0.0` with `productName: "Corvath Tarot"`; branding is
+**Erisco** (`co.eris.*`, data under `Erisco/`). Code, tooling, and release plumbing are all in
+place — **the only thing holding the `v1.0.0` tag is the Hybrasyl deck art** (section D).
+
+To cut the release once the art lands: promote `## [Unreleased]` in `CHANGELOG.md` to
+`## [1.0.0] - <date>`, then tag `v1.0.0` and push. `.github/workflows/release.yml` validates,
+builds the portable exe, extracts the notes, and publishes. That first release is also what makes
+`updateCheck.ts` resolve — it 404s silently today, because no release exists yet.
 
 ## A. Branding & identity — DECIDED: Erisco ✅ DONE
 
@@ -15,13 +21,14 @@ Status snapshot: `v0.1.0`, `productName: "Tarot Reading Recorder"`. Branding dec
 
 ## B. App icon
 
-- [~] Master PNG — provisional art in `resources/corvath.png` (raven + septagram, 1254×1254).
-  "Use until settled"; swap the file when final art is ready (same path, no code change).
+- [x] Art lives at `resources/corvath.png` (raven + septagram, 1254×1254). Swapping the file
+      later needs no code change.
 - [x] `icon: resources/corvath.png` added to `electron-builder.yml`.
 - [x] Wired into `BrowserWindow` via `import icon from '../../resources/corvath.png?asset'`.
       Typecheck + build green; asset path resolves in dev and packaged.
-- [ ] Visually confirm taskbar + nsis installer shortcut render the icon (next `npm run dev`
-      / `build:win`).
+- [x] Master PNG — DECIDED: the provisional raven + septagram art **is** the icon for 1.0.
+- [ ] Visually confirm the taskbar icon renders (next `npm run dev` / `build:win`). The nsis
+      installer-shortcut half of this is moot: 1.0 ships portable-only (see E).
 - [x] Replaced the in-app title-bar book glyph (`AutoStoriesIcon`) with the corvath image.
 - [x] Splash window now shows the corvath logo (replaced the inline SVG star motif).
 
@@ -53,14 +60,39 @@ Decided: **both draw modes**, and **layout-or-free-N-card**.
 - [x] Card art uses `objectFit: contain` (was `cover`) so no scan is clipped — e.g. RWS, which
       is narrower than the 5:8 card box. Face has a paper background for clean letterboxing.
 - [ ] Follow-up: click-through the two modes in `npm run dev` to eyeball animations/art & the
-      fan row-fit (draw engine is unit-tested; the tab UI itself isn't automated).
-- [ ] Optional: also render mini card art inside the spread board tiles in the reading view
-      (they currently show position name + card-name label only).
+      fan row-fit. The draw engine is unit-tested and the boot/settings/theme paths now have
+      Playwright specs (`e2e/`), but the Draw tab UI itself still isn't automated.
+- [x] Mini card art now renders inside the spread board tiles in the reading view, with the
+      slot + card name on hover. Tiles are 2x their old size; note that tile size and board
+      height are coupled (see the comment in `LayoutBoard.tsx` and its invariant test).
+      Each entry in the card list below the board also names its slot and shows the slot's
+      meaning.
 
-## D. Deck art
+## D. Deck art — **the only thing blocking the tag**
 
-- [ ] Finish Argent Tarot art (Thoth reskin, in progress).
-- [ ] Finish Hybrasyl deck art.
+- [x] Argent Tarot art — done. All 79 files (78 cards + back) are bundled under
+      `bundled/decks/argent/`; re-run `node scripts/build-argent-art.mjs` to rebuild from the
+      PNG originals.
+- [ ] **Hybrasyl deck art.** The deck's _structure_ now ships (35 pantheon majors over four
+      short suits, 83 cards — `src/main/seedDecks.ts`), and every card has a meaning, but no art
+      is drawn yet, so cards fall back to the name placeholder.
+      To land it: drop the PNGs in `F:\Downloads\Tarot Images\Hybrasyl Tarot` (or set
+      `HYBRASYL_SRC`), run `node scripts/build-hybrasyl-art.mjs`, then add
+      `imageExt: 'webp'` + `back: 'back.webp'` to the `hybrasyl` spec and bump its `seedVersion`.
+      Those two fields are deliberately unset until the art exists — with them, every card
+      claims an image file that isn't there.
+
+## D2. Card meanings ✅ DONE
+
+- [x] All four shipped decks carry a meaning + keywords for every card, seeded via
+      `src/main/seedMeanings/` and folded on by `buildMajors`/`buildMinors`. Each deck is
+      written in its own register (RWS traditional, Argent in the Thoth decan idiom, Empyrean
+      per its art direction, Hybrasyl from the pantheon). RWS also has reversed meanings; the
+      other three are upright-only decks.
+- Note for later: `preferSeedString` (`store.ts`) makes a **non-empty seed value win over a
+  user's edit** on a `seedVersion` bump. Now that the decks ship text, any future meanings
+  update will overwrite edits a user made to a built-in card. That was harmless while the seeds
+  were empty; it isn't now. Worth revisiting if built-in meanings are ever changed post-1.0.
 
 ## E. Nice-to-haves / decide in/out for 1.0
 
@@ -90,9 +122,31 @@ Decided: **both draw modes**, and **layout-or-free-N-card**.
       dialog and writes the JSON (main only picks the path + writes — mapping/validation live in
       the renderer). Result Snackbar. Round-trip unit-tested (export → import equivalence).
 
+## F. Release plumbing ✅ DONE
+
+The house architecture doc listed corvath as having no CI, no CHANGELOG pipeline, and no e2e.
+All three are in now:
+
+- [x] **CHANGELOG flow** — `CHANGELOG.md` (Keep a Changelog, oghma's model) +
+      `scripts/changelog-extract.mjs`, copied verbatim from the template and unit-tested.
+- [x] **`.github/workflows/release.yml`** — `validate` (typecheck / lint / format / coverage) on
+      every PR, `build-windows`, and a tag-gated `release`. Trimmed to this app's shape: no
+      linux/mac jobs, since `electron-builder.yml` declares no such targets. `workflow_dispatch`
+      builds without publishing — use it as a dry run.
+      The Windows signing step is **guarded**, unlike every sibling's: with no SSL.com `ES_*`
+      secrets it warns and ships an unsigned exe rather than failing the release. SmartScreen
+      will warn on first run; accepted.
+- [x] **Playwright e2e** (`e2e/`) — the house harness, local-only per the e2e architecture doc
+      (CI would need a display). Specs: app boot + seeding, settings persistence across a
+      relaunch, and all six themes. Needs the `app-root` / `app-hydrating` / `title-bar` /
+      `theme-select` testids to stay put.
+- [x] **Coverage floors** in `vitest.config.mjs`, ratcheted just under actual so
+      `test:coverage` gates rather than merely reports. The UI layer is deliberately not
+      thresholded; raise the floors as the zustand stores pick up tests.
+
 ## Ordering
 
-1. A (branding) — unblocks a clean 1.0 build and avoids a painful data migration later.
-2. C (reading engine) — the feature that makes it 1.0 rather than 0.x.
-3. B + D — polish/art, parallelizable.
-4. E — scope decisions.
+1. A (branding) — unblocks a clean 1.0 build and avoids a painful data migration later. ✅
+2. C (reading engine) — the feature that makes it 1.0 rather than 0.x. ✅
+3. B + D — polish/art, parallelizable. **D (Hybrasyl art) is what remains.**
+4. E — scope decisions. ✅

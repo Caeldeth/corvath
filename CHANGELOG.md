@@ -38,10 +38,17 @@ and stays local.
   ranks, and court ranks, with per-card meanings, keywords, and imported art plus
   a card back. Four decks ship built in — **Rider-Waite-Smith**, the **Argent
   Tarot** (original art on the Thoth structure), the **Empyrean** (original art,
-  custom court ranks), and **Hybrasyl**.
+  custom court ranks), and **Hybrasyl** (the Temuairan pantheon: 35 majors over
+  four short suits).
+- **Card meanings** — every built-in deck ships a meaning and keywords for each
+  card, written in that deck's own register rather than one set of text reused
+  across all four. Rider-Waite-Smith also carries reversed meanings. They are
+  yours to edit.
 - **Layouts** — a visual spread builder: drag positions on a board, name each
   slot, mark crossing cards, and set which end of the deck a slot draws from.
-  Single Card, Three Card, Celtic Cross, and Horseshoe ship seeded.
+  Single Card, Three Card, Celtic Cross, and Horseshoe ship seeded. A recorded
+  reading shows its spread with the drawn cards' art in place, and each card in
+  the list below names the slot it fills.
 - **Card preview** — click any face-up card to see it large, with its keywords,
   orientation, and the deck's meaning.
 - **Import & export** — readings import and export as round-trippable JSON;
