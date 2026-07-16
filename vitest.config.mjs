@@ -16,7 +16,18 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'html', 'json-summary'],
       include: ['src/**/*.{ts,tsx}'],
-      exclude: ['**/*.d.ts', '**/__tests__/**', 'src/preload/**', '**/*.config.*']
+      exclude: ['**/*.d.ts', '**/__tests__/**', 'src/preload/**', '**/*.config.*'],
+      // Global floors — ratcheted to just under current coverage so the suite
+      // guards against regression rather than setting an aspiration. The bulk
+      // of the untested surface is the UI layer (components/pages), which is
+      // covered by the Playwright specs in e2e/ instead. Raise these as the
+      // zustand stores pick up unit tests.
+      thresholds: {
+        statements: 27,
+        branches: 19,
+        functions: 17,
+        lines: 28
+      }
     },
     projects: [
       {
