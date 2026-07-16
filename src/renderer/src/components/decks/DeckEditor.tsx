@@ -161,6 +161,21 @@ export default function DeckEditor({
         </Box>
 
         <Divider>Major Arcana ({majors.length})</Divider>
+        {/* The dot on a thumb is unexplained otherwise — and now that the shipped
+            decks carry a meaning on every card, it's lit everywhere, which reads
+            as decoration until you know what it is. Show the real dot rather
+            than naming a colour. */}
+        <Typography
+          variant="caption"
+          sx={{ opacity: 0.7, mt: -1, display: 'flex', alignItems: 'center', gap: 0.75 }}
+        >
+          <Box
+            component="span"
+            sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'success.main' }}
+          />
+          marks a card that has a meaning written. Click a card to edit its meaning, keywords, and
+          art.
+        </Typography>
         <Box sx={gridSx}>
           {majors.map((card) => (
             <CardThumb

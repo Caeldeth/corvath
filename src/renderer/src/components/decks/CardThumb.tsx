@@ -69,6 +69,7 @@ export default function CardThumb({ deck, card, onClick }: CardThumbProps) {
           )}
           {hasMeaning && (
             <Box
+              title="Has a meaning"
               sx={{
                 position: 'absolute',
                 bottom: 4,
