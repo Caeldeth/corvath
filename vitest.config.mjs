@@ -27,10 +27,10 @@ export default defineConfig({
       // covered by the Playwright specs in e2e/ instead. Raise these as the
       // zustand stores pick up unit tests.
       thresholds: {
-        statements: 27,
-        branches: 19,
-        functions: 17,
-        lines: 28
+        statements: 28,
+        branches: 21,
+        functions: 18,
+        lines: 30
       }
     },
     projects: [
