@@ -27,7 +27,8 @@ export default defineConfig({
           include: [
             'src/main/**/__tests__/**/*.test.ts',
             'src/shared/**/__tests__/**/*.test.ts',
-            'src/renderer/src/lib/__tests__/**/*.test.ts'
+            'src/renderer/src/lib/__tests__/**/*.test.ts',
+            'scripts/**/*.test.mjs'
           ]
         }
       },

@@ -37,12 +37,12 @@ pixels.
   it sets the renderer viewport, which is what layout responds to anyway.
 - **Isolate the profile via `LOCALAPPDATA`.** `src/main/index.ts` resolves
   userData as `%LOCALAPPDATA%/Erisco/Corvath`. Pointing `LOCALAPPDATA` at a temp
-  dir gives a clean install *and* keeps you out of the user's real readings and
+  dir gives a clean install _and_ keeps you out of the user's real readings and
   decks. Always do this — never drive the app against the real profile.
 - **Every store file is wrapped as `{ version, <key> }`** (`decks.json` →
   `{version, decks: [...]}`, `layouts.json` → `{version, layouts: [...]}`). A
   bare array is silently rejected by `normalize` and falls back to defaults.
-- **`ensureLayoutsSeeded` only seeds when layouts.json is *absent***
+- **`ensureLayoutsSeeded` only seeds when layouts.json is _absent_**
   (`store.ts` — an `exists()` guard, unlike decks which re-add missing built-ins
   by id). So a hand-seeded layouts.json must also contain any built-in spreads
   you want, or you get none. A malformed layouts.json yields zero layouts

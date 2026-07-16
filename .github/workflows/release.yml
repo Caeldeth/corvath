@@ -1,0 +1,160 @@
+name: Release
+
+# Cribbed from hyb-electron-template, trimmed to corvath's shape: this app ships
+# a single Windows portable exe (electron-builder.yml declares no mac/linux
+# targets), so the sibling build-linux/build-mac jobs and their signing +
+# notarization apparatus are deliberately absent.
+#
+# Optional repository secrets:
+#   ES_USERNAME / ES_PASSWORD / ES_CREDENTIAL_ID / ES_TOTP_SECRET  (SSL.com eSigner)
+#     — when unset, the exe ships UNSIGNED and SmartScreen will warn on first run.
+#       Unlike the siblings, the signing step here is guarded rather than assumed.
+#   DISCORD_WEBHOOK_URL                                            (release announcement)
+
+on:
+  push:
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  # Fast validation gate — runs on every PR to main (and before any release
+  # build). This is the only place typecheck / lint / format / tests are
+  # enforced, so don't drop it.
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint:check
+
+      - name: Format check
+        run: npm run format:check
+
+      - name: Test + coverage gate
+        run: npm run test:coverage
+
+  build-windows:
+    runs-on: windows-latest
+    needs: validate
+    if: github.event_name != 'pull_request'
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build app
+        run: npm run build
+
+      - name: Package portable exe
+        run: npx electron-builder --win --publish never
+
+      - name: Resolve artifact name + version
+        id: pkg
+        shell: bash
+        run: |
+          echo "name=$(node -p "require('./package.json').name")" >> "$GITHUB_OUTPUT"
+          echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      # The secrets context isn't available in a step-level `if:`, so probe it
+      # into an output first and gate the signing step on that.
+      - name: Check for signing credentials
+        id: signing
+        shell: bash
+        env:
+          ES_USERNAME: ${{ secrets.ES_USERNAME }}
+        run: |
+          if [ -n "$ES_USERNAME" ]; then
+            echo 'enabled=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'enabled=false' >> "$GITHUB_OUTPUT"
+            echo '::warning::No SSL.com eSigner credentials set — shipping an UNSIGNED exe.'
+          fi
+
+      - name: Sign portable exe (SSL.com eSigner)
+        if: steps.signing.outputs.enabled == 'true'
+        uses: sslcom/esigner-codesign@cf5f6c1d38ad10f47e3ed9aca873f429b1a8d85b # v1.3.2
+        with:
+          command: sign
+          username: ${{ secrets.ES_USERNAME }}
+          password: ${{ secrets.ES_PASSWORD }}
+          credential_id: ${{ secrets.ES_CREDENTIAL_ID }}
+          totp_secret: ${{ secrets.ES_TOTP_SECRET }}
+          file_path: ${{ github.workspace }}/dist/${{ steps.pkg.outputs.name }}-${{ steps.pkg.outputs.version }}-portable.exe
+          override: true
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-portable
+          path: dist/*-portable.exe
+          if-no-files-found: error
+
+  release:
+    runs-on: ubuntu-latest
+    needs: [build-windows]
+    if: github.ref_type == 'tag'
+
+    steps:
+      # Checkout (the release job otherwise only downloads artifacts) so the
+      # CHANGELOG + extract script are on disk.
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      # Pull this tag's section from CHANGELOG.md into the release body. Missing
+      # section → empty file → the release falls back to the auto notes below.
+      - name: Extract release notes from CHANGELOG
+        run: node scripts/changelog-extract.mjs "${{ github.ref_name }}" > RELEASE_NOTES.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/**/*-portable.exe
+          # Curated CHANGELOG section on top; generate_release_notes appends the
+          # auto PR list + Full Changelog link below it.
+          body_path: RELEASE_NOTES.md
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+
+      - name: Notify Discord
+        if: success()
+        continue-on-error: true
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          [ -z "$DISCORD_WEBHOOK_URL" ] && { echo "No webhook configured; skipping."; exit 0; }
+          TAG="${{ github.ref_name }}"
+          REPO="${{ github.repository }}"
+          RELEASE_URL="https://github.com/$REPO/releases/tag/$TAG"
+          curl -sf -H "Content-Type: application/json" \
+            -d "{\"content\": \"**Corvath $TAG** is now available!\n$RELEASE_URL\"}" \
+            "$DISCORD_WEBHOOK_URL"
