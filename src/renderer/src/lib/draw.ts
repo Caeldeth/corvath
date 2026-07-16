@@ -88,6 +88,35 @@ export function dealForCount(deck: Deck, count: number, seed: number): DrawnCard
   return shuffledDeck(deck, seed).slice(0, count)
 }
 
+export interface FanPlan {
+  /** The shuffled deck, in order: index 0 is the top, the last index the bottom. */
+  fan: DrawnCard[]
+  /** Slot index -> fan index, for slots pinned by `source`. Others are free picks. */
+  pinned: Record<number, number>
+}
+
+/**
+ * Plan a fan-and-pick session. A position marked `source: 'top' | 'bottom'` names
+ * one specific card — the deck's top or bottom — so it cannot meaningfully be
+ * picked; those slots are resolved here from the ends of the shuffled deck and
+ * their cards are spent before the user chooses anything. Every other slot is
+ * left for the user to pick from the fan.
+ *
+ * Unlike `dealForLayout`, an unset `source` does NOT default to the top: in a fan
+ * draw an unpinned slot is precisely the one the user gets to choose.
+ */
+export function planFan(deck: Deck, layout: Layout | null, seed: number): FanPlan {
+  const fan = shuffledDeck(deck, seed)
+  const pinned: Record<number, number> = {}
+  let top = 0
+  let bottom = fan.length - 1
+  layout?.positions.forEach((pos, i) => {
+    if (pos.source === 'bottom') pinned[i] = bottom--
+    else if (pos.source === 'top') pinned[i] = top++
+  })
+  return { fan, pinned }
+}
+
 export interface AssembleArgs {
   deck: Deck
   title: string

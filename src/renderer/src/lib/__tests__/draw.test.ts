@@ -7,6 +7,7 @@ import {
   drawPool,
   makeSeed,
   mulberry32,
+  planFan,
   shuffledDeck
 } from '../draw'
 
@@ -137,6 +138,55 @@ describe('dealForLayout', () => {
     expect(drawn[1]).toEqual(full[1]) // undefined defaults to top
     expect(drawn[2]).toEqual(full[full.length - 1]) // bottom
     expect(new Set(drawn.map((c) => c.cardId)).size).toBe(3) // no dupes
+  })
+})
+
+describe('planFan', () => {
+  const deck = makeDeck()
+  const seed = 314
+
+  it('fans the whole shuffled deck', () => {
+    const { fan } = planFan(deck, makeLayout(['top', undefined]), seed)
+    expect(fan).toEqual(shuffledDeck(deck, seed))
+  })
+
+  it('pins nothing when no position sets a source', () => {
+    const { pinned } = planFan(deck, makeLayout([undefined, undefined, undefined]), seed)
+    expect(pinned).toEqual({})
+  })
+
+  it('pins nothing for a free draw with no layout', () => {
+    const { fan, pinned } = planFan(deck, null, seed)
+    expect(pinned).toEqual({})
+    expect(fan).toHaveLength(12)
+  })
+
+  it('pins top slots to the head of the fan and bottom slots to the tail', () => {
+    const { fan, pinned } = planFan(deck, makeLayout(['top', undefined, 'bottom']), seed)
+    expect(pinned).toEqual({ 0: 0, 2: fan.length - 1 })
+  })
+
+  it('does not pin an unset source, unlike dealForLayout', () => {
+    const { pinned } = planFan(deck, makeLayout(['bottom', undefined]), seed)
+    // Slot 1 is the user's to pick; dealForLayout would have dealt it from the top.
+    expect(pinned).toEqual({ 0: 11 })
+    expect(1 in pinned).toBe(false)
+  })
+
+  it('walks multiple pins inward from each end without collision', () => {
+    const layout = makeLayout(['bottom', 'top', 'bottom', 'top'])
+    const { fan, pinned } = planFan(deck, layout, seed)
+    expect(pinned).toEqual({ 0: 11, 1: 0, 2: 10, 3: 1 })
+    const fanIndices = Object.values(pinned)
+    expect(new Set(fanIndices).size).toBe(fanIndices.length) // no card pinned twice
+    expect(new Set(fanIndices.map((i) => fan[i].cardId)).size).toBe(4)
+  })
+
+  it('agrees with dealForLayout when every position is pinned', () => {
+    const layout = makeLayout(['top', 'bottom', 'top'])
+    const { fan, pinned } = planFan(deck, layout, seed)
+    const dealt = dealForLayout(deck, layout, seed)
+    expect(layout.positions.map((_p, i) => fan[pinned[i]])).toEqual(dealt)
   })
 })
 
