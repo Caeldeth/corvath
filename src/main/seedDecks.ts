@@ -1,4 +1,6 @@
 import type { Deck, DeckCard } from '../shared/types'
+import type { CardMeaning, DeckMeanings } from './seedMeanings/types'
+import { SEED_MEANINGS } from './seedMeanings'
 
 const PIPS = ['Ace', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten']
 
@@ -85,16 +87,34 @@ function slug(value: string): string {
     .replace(/^-+|-+$/g, '')
 }
 
-function buildMajors(names: string[], imageExt?: string): DeckCard[] {
+/**
+ * Fold seeded text onto a card. Empty/absent fields are omitted rather than set
+ * to '' so the merge on a seedVersion bump keeps deferring to the user's own
+ * text for anything the seed doesn't say (see preferSeedString in store.ts).
+ */
+function withMeaning(card: DeckCard, text: CardMeaning | undefined): DeckCard {
+  if (!text) return card
+  return {
+    ...card,
+    ...(text.meaning ? { meaning: text.meaning } : {}),
+    ...(text.meaningReversed ? { meaningReversed: text.meaningReversed } : {}),
+    ...(text.keywords?.length ? { keywords: text.keywords } : {})
+  }
+}
+
+function buildMajors(names: string[], imageExt?: string, meanings?: DeckMeanings): DeckCard[] {
   return names.map((name, number) => {
     const id = `maj-${number}`
-    return {
-      id,
-      section: 'major' as const,
-      name,
-      number,
-      ...(imageExt ? { image: `${id}.${imageExt}` } : {})
-    }
+    return withMeaning(
+      {
+        id,
+        section: 'major' as const,
+        name,
+        number,
+        ...(imageExt ? { image: `${id}.${imageExt}` } : {})
+      },
+      meanings?.majors?.[name]
+    )
   })
 }
 
@@ -102,20 +122,26 @@ function buildMinors(
   suits: string[],
   pipRanks: string[],
   courtRanks: string[],
-  imageExt?: string
+  imageExt?: string,
+  meanings?: DeckMeanings
 ): DeckCard[] {
   const cards: DeckCard[] = []
   for (const suit of suits) {
     for (const rank of [...pipRanks, ...courtRanks]) {
       const id = `${slug(suit)}-${slug(rank)}`
-      cards.push({
-        id,
-        section: 'minor',
-        name: `${rank} of ${suit}`,
-        suit,
-        rank,
-        ...(imageExt ? { image: `${id}.${imageExt}` } : {})
-      })
+      cards.push(
+        withMeaning(
+          {
+            id,
+            section: 'minor',
+            name: `${rank} of ${suit}`,
+            suit,
+            rank,
+            ...(imageExt ? { image: `${id}.${imageExt}` } : {})
+          },
+          meanings?.minors?.[id]
+        )
+      )
     }
   }
   return cards
@@ -236,24 +262,30 @@ const SPECS: DeckSpec[] = [
   }
 ]
 
-/** Build the built-in decks. `now` is an ISO timestamp stamped on each deck. */
+/**
+ * Build the built-in decks. `now` is an ISO timestamp stamped on each deck.
+ * Card text is looked up per deck from SEED_MEANINGS.
+ */
 export function buildSeedDecks(now: string): Deck[] {
-  return SPECS.map((spec) => ({
-    id: spec.id,
-    name: spec.name,
-    description: spec.description,
-    builtIn: true,
-    suits: spec.suits,
-    pipRanks: spec.pipRanks,
-    courtRanks: spec.courtRanks,
-    supportsReversed: spec.supportsReversed,
-    back: spec.back,
-    seedVersion: spec.seedVersion ?? 1,
-    cards: [
-      ...buildMajors(spec.majors, spec.imageExt),
-      ...buildMinors(spec.suits, spec.pipRanks, spec.courtRanks, spec.imageExt)
-    ],
-    createdAt: now,
-    updatedAt: now
-  }))
+  return SPECS.map((spec) => {
+    const meanings = SEED_MEANINGS[spec.id]
+    return {
+      id: spec.id,
+      name: spec.name,
+      description: spec.description,
+      builtIn: true,
+      suits: spec.suits,
+      pipRanks: spec.pipRanks,
+      courtRanks: spec.courtRanks,
+      supportsReversed: spec.supportsReversed,
+      back: spec.back,
+      seedVersion: spec.seedVersion ?? 1,
+      cards: [
+        ...buildMajors(spec.majors, spec.imageExt, meanings),
+        ...buildMinors(spec.suits, spec.pipRanks, spec.courtRanks, spec.imageExt, meanings)
+      ],
+      createdAt: now,
+      updatedAt: now
+    }
+  })
 }

@@ -1,8 +1,65 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { buildSeedDecks } from '../seedDecks'
+
+vi.mock('../seedMeanings', () => ({
+  SEED_MEANINGS: {
+    rws: {
+      majors: {
+        'The Fool': {
+          keywords: ['beginnings'],
+          meaning: 'A step taken before the ground is proven.',
+          meaningReversed: 'The same step, taken carelessly.'
+        },
+        // Text may be partial — an absent field must not be written.
+        'The Magician': { keywords: ['will'] }
+      },
+      minors: {
+        'swords-ace': { meaning: 'A clean cut.' }
+      }
+    }
+  }
+}))
 
 const now = '2026-07-16T00:00:00.000Z'
 const deck = (id: string) => buildSeedDecks(now).find((d) => d.id === id)!
+const card = (id: string, cardId: string) => deck(id).cards.find((c) => c.id === cardId)!
+
+describe('buildSeedDecks — seeded card text', () => {
+  it('folds meanings and keywords onto majors by name', () => {
+    expect(card('rws', 'maj-0')).toMatchObject({
+      name: 'The Fool',
+      keywords: ['beginnings'],
+      meaning: 'A step taken before the ground is proven.',
+      meaningReversed: 'The same step, taken carelessly.'
+    })
+  })
+
+  it('folds meanings onto minors by card id', () => {
+    expect(card('rws', 'swords-ace').meaning).toBe('A clean cut.')
+  })
+
+  it('omits fields the text does not supply rather than writing empties', () => {
+    // preferSeedString treats '' as "seed says nothing" and keeps the user's
+    // text — but only if the key is absent/blank. Writing '' would be fine;
+    // writing a stray key would not. Keep the shape clean either way.
+    const magician = card('rws', 'maj-1')
+    expect(magician.keywords).toEqual(['will'])
+    expect(magician.meaning).toBeUndefined()
+    expect(magician.meaningReversed).toBeUndefined()
+  })
+
+  it('leaves cards with no seeded text untouched', () => {
+    const untouched = card('rws', 'cups-two')
+    expect(untouched.meaning).toBeUndefined()
+    expect(untouched.keywords).toBeUndefined()
+    // A deck absent from SEED_MEANINGS entirely still builds.
+    expect(card('empyrean', 'maj-0').meaning).toBeUndefined()
+  })
+
+  it('does not disturb structure', () => {
+    expect(deck('rws').cards).toHaveLength(78)
+  })
+})
 
 describe('buildSeedDecks — hybrasyl', () => {
   it('builds the pantheon majors over four short suits', () => {
