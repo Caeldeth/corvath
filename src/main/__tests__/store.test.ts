@@ -161,7 +161,7 @@ describe('ensureDecksSeeded', () => {
     await s.saveDecks([versionless])
     await s.ensureDecksSeeded(now)
     const hybrasyl = (await s.loadDecks()).find((d) => d.id === 'hybrasyl')!
-    expect(hybrasyl.seedVersion).toBe(2)
+    expect(hybrasyl.seedVersion).toBe(currentSeed('hybrasyl').seedVersion)
     expect(hybrasyl.suits).toEqual(['Swords', 'Staves', 'Coins', 'Cups'])
     expect(hybrasyl.cards).toHaveLength(83)
   })

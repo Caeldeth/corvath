@@ -2,6 +2,7 @@ import type { DeckMeanings } from './types'
 import { RWS_MEANINGS } from './rws'
 import { ARGENT_MEANINGS } from './argent'
 import { EMPYREAN_MEANINGS } from './empyrean'
+import { HYBRASYL_MEANINGS } from './hybrasyl'
 
 /**
  * Seeded card text, per built-in deck id. A deck with no entry here ships with
@@ -13,7 +14,8 @@ import { EMPYREAN_MEANINGS } from './empyrean'
 export const SEED_MEANINGS: Record<string, DeckMeanings> = {
   rws: RWS_MEANINGS,
   argent: ARGENT_MEANINGS,
-  empyrean: EMPYREAN_MEANINGS
+  empyrean: EMPYREAN_MEANINGS,
+  hybrasyl: HYBRASYL_MEANINGS
 }
 
 export type { CardMeaning, DeckMeanings } from './types'

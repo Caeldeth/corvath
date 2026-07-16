@@ -213,16 +213,23 @@ const SPECS: DeckSpec[] = [
     id: 'hybrasyl',
     name: 'Hybrasyl',
     description:
-      'The Temuairan pantheon and its aisling world. 35 majors — the gods, then the ' +
-      'three that stand outside them — over four suits of eight, with mentors, guides, ' +
-      'speakers and dreamers for courts.',
+      'The Temuairan pantheon as the Octagram: four pantheons of eight, each running the ' +
+      'same compass, plus the three primordials who stand outside it. 35 majors over four ' +
+      'suits of eight, with mentors, guides, speakers and dreamers for courts.',
     suits: ['Swords', 'Staves', 'Coins', 'Cups'],
     // A short suit: eight pips rather than ten.
     pipRanks: ['Ace', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight'],
     courtRanks: ['Mentor', 'Guide', 'Speaker', 'Dreamer'],
     // Like the Argent and the Empyrean, this deck is read upright only.
     supportsReversed: false,
+    // The order is the Octagram, not a list: four pantheons of eight, each in the
+    // same compass order — N/Fire, NW/Life, W/Earth, SW/Arcane, S/Water,
+    // SE/Metal, E/Wind, NE/Void — then the three primordials. So maj-0, maj-8,
+    // maj-16 and maj-24 are all North: the same fire expressed, in truth,
+    // inverted, and corrupted. Reordering this breaks that reading (and the
+    // meanings in seedMeanings/hybrasyl.ts, which name each card's direction).
     majors: [
+      // Tuathair — Expression
       'Deoch',
       'Glioca',
       'Cail',
@@ -231,6 +238,7 @@ const SPECS: DeckSpec[] = [
       'Fiosachd',
       'Ceannlaidir',
       'Sgrios',
+      // Aosdair — Truth
       'Grannos',
       'Saothra',
       'Céithe',
@@ -239,6 +247,7 @@ const SPECS: DeckSpec[] = [
       'Lir',
       'Leothne',
       'Cairde',
+      // Cráidhros — Inversion
       'Oraithe Ridire',
       'Neamhghlan',
       'Codlaim',
@@ -247,6 +256,7 @@ const SPECS: DeckSpec[] = [
       'Fhala',
       'Adhnann',
       'Cin-Mhare',
+      // Gháelros — Corruption
       'Diorradh',
       'Bhàrnadh',
       'Bodhrag',
@@ -255,14 +265,15 @@ const SPECS: DeckSpec[] = [
       'Anaman',
       'Cairrthir',
       'Basnuall',
+      // Athríd — the primordial trinity, outside the seal
       'Chadul',
       'Danaan',
       'Grinneal'
     ],
-    // Bumped to push the structure over the older empty copy. Art is still in
-    // progress: leave imageExt/back unset until it lands, or every card would
-    // claim an image file that doesn't exist.
-    seedVersion: 2
+    // 2: the structure, over the older empty copy. 3: card meanings.
+    // Art is still in progress: leave imageExt/back unset until it lands, or
+    // every card would claim an image file that doesn't exist.
+    seedVersion: 3
   }
 ]
 
