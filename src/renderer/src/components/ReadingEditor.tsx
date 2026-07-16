@@ -15,7 +15,7 @@ import {
 import AddIcon from '@mui/icons-material/Add'
 import type { Deck, Entry, Layout, Reading } from '../../../shared/types'
 import EntryCard from './EntryCard'
-import LayoutBoard from './layouts/LayoutBoard'
+import LayoutBoard, { type PositionArt } from './layouts/LayoutBoard'
 
 interface ReadingEditorProps {
   reading: Reading
@@ -56,6 +56,19 @@ export default function ReadingEditor({
   // For the board preview, show the drawn card under each position.
   const cardForPosition = (positionId: string): string | undefined =>
     reading.entries.find((e) => e.positionId === positionId)?.card || undefined
+
+  // …and its face art, when the deck has any. Entries link to a position by id,
+  // then to a deck card by name — the same two hops EntryCard makes.
+  const artForPosition = (positionId: string): PositionArt | undefined => {
+    const entry = reading.entries.find((e) => e.positionId === positionId)
+    if (!entry?.card || !currentDeck) return undefined
+    const card = currentDeck.cards.find((c) => c.name === entry.card)
+    if (!card?.image) return undefined
+    return {
+      url: `${window.api.decks.imageUrl(currentDeck.id, card.image)}?v=${card.imageVersion ?? 0}`,
+      reversed: entry.orientation === 'reversed' && currentDeck.supportsReversed
+    }
+  }
 
   const isCorvath = reading.source === 'corvath'
 
@@ -124,6 +137,7 @@ export default function ReadingEditor({
               positions={activeLayout.positions}
               height={300}
               sublabel={(position) => cardForPosition(position.id)}
+              art={(position) => artForPosition(position.id)}
             />
           </Box>
         )}

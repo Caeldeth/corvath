@@ -3,6 +3,12 @@ import { Box } from '@mui/material'
 import type { LayoutPosition } from '../../../../shared/types'
 import { clamp01 } from '../../lib/layout'
 
+/** The drawn card's art for a position, as resolved by the caller. */
+export interface PositionArt {
+  url: string
+  reversed?: boolean
+}
+
 interface LayoutBoardProps {
   positions: LayoutPosition[]
   selectedId?: string | null
@@ -11,6 +17,11 @@ interface LayoutBoardProps {
   onMove?: (id: string, x: number, y: number) => void
   /** Optional secondary label under the position name (e.g. the drawn card). */
   sublabel?: (position: LayoutPosition, index: number) => string | undefined
+  /**
+   * Optional face art for a filled position. Only the reading view passes this —
+   * the layout editor has no deck or entries to resolve art from.
+   */
+  art?: (position: LayoutPosition, index: number) => PositionArt | undefined
   height?: number
 }
 
@@ -23,6 +34,7 @@ export default function LayoutBoard({
   onSelect,
   onMove,
   sublabel,
+  art,
   height = 380
 }: LayoutBoardProps) {
   const boardRef = useRef<HTMLDivElement>(null)
@@ -70,12 +82,17 @@ export default function LayoutBoard({
       {positions.map((position, index) => {
         const selected = position.id === selectedId
         const sub = sublabel?.(position, index)
+        const face = art?.(position, index)
         return (
           <Box
             key={position.id}
             onPointerDown={(e) => handlePointerDown(e, position.id)}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
+            // With art the tile is mostly image, so the names move to a tooltip.
+            title={
+              face ? [`${index + 1}. ${position.name}`, sub].filter(Boolean).join(' — ') : undefined
+            }
             sx={{
               position: 'absolute',
               left: `${position.x * 100}%`,
@@ -98,6 +115,32 @@ export default function LayoutBoard({
               userSelect: 'none'
             }}
           >
+            {face && (
+              // Fills the tile, under the ordinal badge. `contain` letterboxes
+              // rather than cropping, since bundled decks vary in aspect and the
+              // tile's own ratio matches none of them exactly. A reversed card
+              // rotates 180° *within* the tile, so on a crossing position it
+              // composes with the tile's own rotation — which is what a reversed
+              // crossing card should look like.
+              <Box
+                component="img"
+                src={face.url}
+                alt=""
+                onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
+                  // The art is decoration here; the tooltip still names the card.
+                  e.currentTarget.style.display = 'none'
+                }}
+                sx={{
+                  position: 'absolute',
+                  inset: 0,
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'contain',
+                  borderRadius: 0.5,
+                  transform: face.reversed ? 'rotate(180deg)' : 'none'
+                }}
+              />
+            )}
             {position.source && (
               <Box
                 sx={{
@@ -114,21 +157,40 @@ export default function LayoutBoard({
                 {position.source === 'top' ? '↑' : '↓'}
               </Box>
             )}
-            <Box sx={{ fontWeight: 700, fontSize: '0.9rem', lineHeight: 1 }}>{index + 1}</Box>
             <Box
               sx={{
-                fontSize: '0.5rem',
-                lineHeight: 1.05,
-                textAlign: 'center',
-                overflow: 'hidden',
-                display: '-webkit-box',
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: 'vertical'
+                fontWeight: 700,
+                fontSize: '0.9rem',
+                lineHeight: 1,
+                // Over art, the ordinal needs its own backdrop to stay readable.
+                ...(face && {
+                  position: 'absolute',
+                  top: 1,
+                  left: 3,
+                  fontSize: '0.6rem',
+                  color: 'common.white',
+                  textShadow: '0 0 3px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.7)'
+                })
               }}
             >
-              {position.name}
+              {index + 1}
             </Box>
-            {sub && (
+            {!face && (
+              <Box
+                sx={{
+                  fontSize: '0.5rem',
+                  lineHeight: 1.05,
+                  textAlign: 'center',
+                  overflow: 'hidden',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical'
+                }}
+              >
+                {position.name}
+              </Box>
+            )}
+            {!face && sub && (
               <Box
                 sx={{
                   fontSize: '0.48rem',

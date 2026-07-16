@@ -5,10 +5,16 @@ description: Build, launch, and drive the Corvath Electron app over CDP to obser
 
 # Verifying Corvath
 
-Corvath is an Electron + React + MUI app. There is no Playwright and no test-id
-attributes, so the way to observe a change is to launch the real app with
-`--remote-debugging-port` and drive it over the Chrome DevTools Protocol.
-Node 24 has a global `WebSocket` and `fetch`, so a CDP driver needs no deps.
+Corvath is an Electron + React + MUI app. To observe a change, launch the real
+app with `--remote-debugging-port` and drive it over the Chrome DevTools
+Protocol. Node 24 has a global `WebSocket` and `fetch`, so a CDP driver needs
+no deps.
+
+**Reach for `npm run e2e` first when a Playwright spec would do.** `e2e/` has a
+launch harness (hermetic temp profile, splash-skipping, relaunch-for-persistence)
+and specs for boot/settings/themes. CDP is for the cases it doesn't cover:
+eyeballing pixels, one-off exploration, and driving a flow you don't want to
+commit a spec for.
 
 ## Build and launch
 
@@ -50,7 +56,9 @@ pixels.
 
 ## Selectors that work
 
-MUI renders no test ids; these hold up:
+There are a few test ids (added for the e2e harness, which waits on `app-root`):
+`app-root` (carries `data-theme`), `app-hydrating`, `title-bar`, `theme-select`.
+Everything else is MUI markup; these hold up:
 
 - Tabs: `button[role="tab"]` — order is Readings, Draw, Decks, Layouts.
 - Selects: `.MuiSelect-select` (click to open, then `li[role="option"]`).
@@ -71,6 +79,16 @@ MUI renders no test ids; these hold up:
   pick the spread, toggle Fan & pick, Shuffle & Draw. Pinned slots should
   arrive pre-filled and their fan cards spent at indices `[0, n-1]`.
 - **Deck seeding** shows on the Decks tab against a fresh profile.
+- **Spread board art** (reading view) — the fiddliest case is a _reversed_ card
+  in a _rotated_ crossing position: `LayoutBoard` rotates the tile by
+  `position.rotation` and the `<img>` inside it by 180° when reversed, so the
+  two compose (a reversed Celtic Cross challenge card reads as 270°). To set one
+  up deterministically, seed `readings.json` directly rather than drawing: read
+  the position ids out of the seeded `layouts.json`, then write entries keyed by
+  `positionId` with `orientation: 'reversed'` on the `rotation: 90` one. Assert
+  on `getComputedStyle(img).transform` — `matrix(-1, 0, 0, -1, 0, 0)` is the
+  180° — and check `naturalWidth > 0` to prove the art loaded rather than
+  silently falling back.
 - **Width/layout** — `Emulation.setDeviceMetricsOverride` to 1920x1080 and to
   the 940 minWidth, then compare `documentElement.scrollWidth` to
   `clientWidth`. `main.css` sets `body { overflow: hidden }`, so horizontal

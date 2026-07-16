@@ -8,6 +8,10 @@ export default defineConfig({
       '@shared': resolve('src/shared')
     }
   },
+  // Match the app build (@vitejs/plugin-react), which uses the automatic JSX
+  // runtime — component files render JSX without importing React, and their
+  // tests should not have to either.
+  esbuild: { jsx: 'automatic' },
   test: {
     // Required for @testing-library/react's automatic per-test cleanup, which
     // registers itself on a global afterEach.
