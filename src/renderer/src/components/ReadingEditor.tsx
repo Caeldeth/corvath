@@ -13,7 +13,7 @@ import {
   Typography
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
-import type { Deck, Entry, Layout, Reading } from '../../../shared/types'
+import type { Deck, Entry, Layout, LayoutPosition, Reading } from '../../../shared/types'
 import EntryCard from './EntryCard'
 import LayoutBoard, { type PositionArt } from './layouts/LayoutBoard'
 
@@ -56,6 +56,10 @@ export default function ReadingEditor({
   // For the board preview, show the drawn card under each position.
   const cardForPosition = (positionId: string): string | undefined =>
     reading.entries.find((e) => e.positionId === positionId)?.card || undefined
+
+  /** The spread slot an entry fills, when the reading has a layout. */
+  const positionForEntry = (entry: Reading['entries'][number]): LayoutPosition | null =>
+    activeLayout?.positions.find((p) => p.id === entry.positionId) ?? null
 
   // …and its face art, when the deck has any. Entries link to a position by id,
   // then to a deck card by name — the same two hops EntryCard makes.
@@ -135,7 +139,6 @@ export default function ReadingEditor({
             </Typography>
             <LayoutBoard
               positions={activeLayout.positions}
-              height={300}
               sublabel={(position) => cardForPosition(position.id)}
               art={(position) => artForPosition(position.id)}
             />
@@ -165,6 +168,7 @@ export default function ReadingEditor({
                 entry={entry}
                 index={index}
                 deck={currentDeck}
+                position={positionForEntry(entry)}
                 onChange={(patch) => onUpdateEntry(entry.id, patch)}
                 onDelete={() => onDeleteEntry(entry.id)}
               />

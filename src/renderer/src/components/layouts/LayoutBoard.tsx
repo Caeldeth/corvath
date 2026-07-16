@@ -25,8 +25,15 @@ interface LayoutBoardProps {
   height?: number
 }
 
-const CARD_W = 54
-const CARD_H = 80
+// Tiles are 2x their original 54x80 so the art is legible rather than a smudge.
+//
+// Size and board height are coupled, so change them together: positions are
+// normalized, and the tightest vertical gap in a seeded spread is 0.22 (the
+// Celtic Cross staff, y = 0.16/0.38/0.60/0.82). A tile taller than 0.22 * height
+// therefore collides with the one above it — at 800 that caps CARD_H at 176.
+export const CARD_W = 108
+export const CARD_H = 160
+export const DEFAULT_HEIGHT = 800
 
 export default function LayoutBoard({
   positions,
@@ -35,7 +42,7 @@ export default function LayoutBoard({
   onMove,
   sublabel,
   art,
-  height = 380
+  height = DEFAULT_HEIGHT
 }: LayoutBoardProps) {
   const boardRef = useRef<HTMLDivElement>(null)
   const dragId = useRef<string | null>(null)
@@ -145,12 +152,16 @@ export default function LayoutBoard({
               <Box
                 sx={{
                   position: 'absolute',
-                  top: 2,
-                  right: 3,
-                  fontSize: '0.6rem',
+                  top: 4,
+                  right: 6,
+                  fontSize: '1rem',
                   fontWeight: 700,
                   lineHeight: 1,
-                  color: 'secondary.light'
+                  color: 'secondary.light',
+                  ...(face && {
+                    color: 'common.white',
+                    textShadow: '0 0 3px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.7)'
+                  })
                 }}
                 title={position.source === 'top' ? 'Top of deck' : 'Bottom of deck'}
               >
@@ -160,14 +171,14 @@ export default function LayoutBoard({
             <Box
               sx={{
                 fontWeight: 700,
-                fontSize: '0.9rem',
+                fontSize: '1.6rem',
                 lineHeight: 1,
                 // Over art, the ordinal needs its own backdrop to stay readable.
                 ...(face && {
                   position: 'absolute',
-                  top: 1,
-                  left: 3,
-                  fontSize: '0.6rem',
+                  top: 3,
+                  left: 6,
+                  fontSize: '1rem',
                   color: 'common.white',
                   textShadow: '0 0 3px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.7)'
                 })
@@ -178,12 +189,12 @@ export default function LayoutBoard({
             {!face && (
               <Box
                 sx={{
-                  fontSize: '0.5rem',
-                  lineHeight: 1.05,
+                  fontSize: '0.85rem',
+                  lineHeight: 1.15,
                   textAlign: 'center',
                   overflow: 'hidden',
                   display: '-webkit-box',
-                  WebkitLineClamp: 2,
+                  WebkitLineClamp: 3,
                   WebkitBoxOrient: 'vertical'
                 }}
               >
@@ -193,13 +204,13 @@ export default function LayoutBoard({
             {!face && sub && (
               <Box
                 sx={{
-                  fontSize: '0.48rem',
-                  lineHeight: 1,
+                  fontSize: '0.78rem',
+                  lineHeight: 1.15,
                   textAlign: 'center',
                   color: 'secondary.light',
                   overflow: 'hidden',
                   display: '-webkit-box',
-                  WebkitLineClamp: 1,
+                  WebkitLineClamp: 2,
                   WebkitBoxOrient: 'vertical'
                 }}
               >
