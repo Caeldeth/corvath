@@ -54,7 +54,7 @@ export default function TitleBar({ themeName, onThemeChange }: TitleBarProps) {
 
   return (
     <AppBar position="static" elevation={0} sx={{ WebkitAppRegion: 'drag', userSelect: 'none' }}>
-      <Toolbar variant="dense" sx={{ minHeight: 40, px: 1.5 }}>
+      <Toolbar data-testid="title-bar" variant="dense" sx={{ minHeight: 40, px: 1.5 }}>
         <Box
           component="img"
           src={`${import.meta.env.BASE_URL}corvath.png`}
@@ -75,6 +75,7 @@ export default function TitleBar({ themeName, onThemeChange }: TitleBarProps) {
           value={themeName}
           onChange={(e) => onThemeChange(e.target.value as ThemeName)}
           aria-label="theme"
+          data-testid="theme-select"
           sx={selectSx}
         >
           {THEME_OPTIONS.map((option) => (
