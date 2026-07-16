@@ -206,7 +206,8 @@ const SPECS: DeckSpec[] = [
     majors: EMPYREAN_MAJORS,
     imageExt: 'webp',
     back: 'back.webp',
-    seedVersion: 2
+    // 3: seeded card meanings + keywords.
+    seedVersion: 3
   },
   {
     id: 'hybrasyl',
