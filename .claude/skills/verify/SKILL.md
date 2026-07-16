@@ -1,0 +1,77 @@
+---
+name: verify
+description: Build, launch, and drive the Corvath Electron app over CDP to observe a change working end-to-end.
+---
+
+# Verifying Corvath
+
+Corvath is an Electron + React + MUI app. There is no Playwright and no test-id
+attributes, so the way to observe a change is to launch the real app with
+`--remote-debugging-port` and drive it over the Chrome DevTools Protocol.
+Node 24 has a global `WebSocket` and `fetch`, so a CDP driver needs no deps.
+
+## Build and launch
+
+```bash
+npm run build          # produces out/main/index.js
+```
+
+```powershell
+Remove-Item env:ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue   # see gotchas
+$env:LOCALAPPDATA = "<scratch>\profile"                              # throwaway profile
+& ".\node_modules\.bin\electron.cmd" . --remote-debugging-port=9222 --no-sandbox
+```
+
+Then `GET http://127.0.0.1:9222/json/list`, take the `page` target whose url is
+not the splash, and connect to its `webSocketDebuggerUrl`. `Runtime.evaluate`
+for reads, `Input.dispatchMouseEvent` for clicks, `Page.captureScreenshot` for
+pixels.
+
+## Gotchas that will cost you an hour
+
+- **`ELECTRON_RUN_AS_NODE=1` is inherited** when Claude Code runs inside the
+  VS Code extension. Electron then runs as plain Node and dies with
+  `Cannot read properties of undefined (reading 'isPackaged')`. Unset it first.
+- **`Browser.getWindowForTarget` / `setWindowBounds` are not available** on
+  Electron page targets. Resize with `Emulation.setDeviceMetricsOverride` —
+  it sets the renderer viewport, which is what layout responds to anyway.
+- **Isolate the profile via `LOCALAPPDATA`.** `src/main/index.ts` resolves
+  userData as `%LOCALAPPDATA%/Erisco/Corvath`. Pointing `LOCALAPPDATA` at a temp
+  dir gives a clean install *and* keeps you out of the user's real readings and
+  decks. Always do this — never drive the app against the real profile.
+- **Every store file is wrapped as `{ version, <key> }`** (`decks.json` →
+  `{version, decks: [...]}`, `layouts.json` → `{version, layouts: [...]}`). A
+  bare array is silently rejected by `normalize` and falls back to defaults.
+- **`ensureLayoutsSeeded` only seeds when layouts.json is *absent***
+  (`store.ts` — an `exists()` guard, unlike decks which re-add missing built-ins
+  by id). So a hand-seeded layouts.json must also contain any built-in spreads
+  you want, or you get none. A malformed layouts.json yields zero layouts
+  permanently.
+
+## Selectors that work
+
+MUI renders no test ids; these hold up:
+
+- Tabs: `button[role="tab"]` — order is Readings, Draw, Decks, Layouts.
+- Selects: `.MuiSelect-select` (click to open, then `li[role="option"]`).
+  Note the theme picker in the title bar is also a `.MuiSelect-select`, so the
+  form's selects are not index 0.
+- Sidebar lists: `.MuiListItemButton-root`.
+- Cards (`DrawCard`): a `div` with `perspective: 700px`. Width distinguishes
+  them — 150px in the slot tray, 88px in the fan pile.
+  - `spent` (already picked / pinned) renders as `opacity: 0.35`.
+  - `flipped` (face showing) is a `rotateY(180deg)` on the first child.
+- Fan DOM order is row-major, so the Nth `perspective:700px` 88px div is fan
+  index N. Index 0 is the top of the deck, index 77 the bottom.
+
+## Flows worth driving
+
+- **Draw / Fan & pick** is the richest surface. Seed a layout with
+  `source: 'top'|'bottom'` on some positions (no built-in spread sets `source`),
+  pick the spread, toggle Fan & pick, Shuffle & Draw. Pinned slots should
+  arrive pre-filled and their fan cards spent at indices `[0, n-1]`.
+- **Deck seeding** shows on the Decks tab against a fresh profile.
+- **Width/layout** — `Emulation.setDeviceMetricsOverride` to 1920x1080 and to
+  the 940 minWidth, then compare `documentElement.scrollWidth` to
+  `clientWidth`. `main.css` sets `body { overflow: hidden }`, so horizontal
+  overflow silently clips instead of showing a scrollbar — measure, don't eyeball.

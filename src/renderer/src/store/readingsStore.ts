@@ -42,7 +42,7 @@ export const useReadingsStore = create<ReadingsState>((set, get) => ({
       id: uid(),
       title: 'Untitled Reading',
       date: today(),
-      deck: 'Thoth',
+      deck: 'Argent Tarot',
       source: 'manual',
       entries: [newEntry()],
       createdAt: nowIso(),

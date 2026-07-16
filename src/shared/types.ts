@@ -11,7 +11,7 @@ export interface Entry {
   positionId?: string
   /** Drawn-card name (e.g. "The Star", "Three of Disks"). */
   card?: string
-  /** Optional — orientation is not always tracked (e.g. Thoth deck). */
+  /** Optional — orientation is not always tracked (e.g. the Argent Tarot). */
   orientation?: Orientation
   /** Free-form per-card interpretation (distinct from the deck's meaning). */
   notes?: string
@@ -36,7 +36,7 @@ export interface Reading {
   title: string
   /** Calendar date of the reading, stored as 'YYYY-MM-DD'. */
   date: string
-  /** Deck used for the whole reading (e.g. "Thoth"). */
+  /** Deck used for the whole reading (e.g. "Argent Tarot"). */
   deck: string
   /** Where the reading came from; defaults to 'manual' for older readings. */
   source?: ReadingSource
@@ -119,7 +119,7 @@ export interface Deck {
   id: string
   name: string
   description?: string
-  /** True for seeded decks (Thoth/RWS/Empyrean/Hybrasyl); still fully editable. */
+  /** True for seeded decks (Argent/RWS/Empyrean/Hybrasyl); still fully editable. */
   builtIn?: boolean
   /** Seed revision; a higher value replaces an older built-in copy on startup. */
   seedVersion?: number

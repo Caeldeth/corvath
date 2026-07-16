@@ -16,6 +16,10 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import type { Deck, DeckCard } from '../../../../shared/types'
 import { cardPlaceholderDataUrl } from '../../lib/cardPlaceholder'
 
+/** 150% of the old 96×150 box, so the dialog doubles as a card preview. */
+const PREVIEW_W = 144
+const PREVIEW_H = 225
+
 interface CardEditorProps {
   deck: Deck
   card: DeckCard | null
@@ -42,7 +46,7 @@ export default function CardEditor({
     : cardPlaceholderDataUrl(card.name)
 
   return (
-    <Dialog open onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog open onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle sx={{ display: 'flex', alignItems: 'center' }}>
         <Box sx={{ flexGrow: 1 }}>
           {card.section === 'major' ? 'Major Arcana' : `${card.suit ?? ''}`}
@@ -60,8 +64,8 @@ export default function CardEditor({
           <Box sx={{ display: 'flex', gap: 2 }}>
             <Box
               sx={{
-                width: 96,
-                height: 150,
+                width: PREVIEW_W,
+                height: PREVIEW_H,
                 flexShrink: 0,
                 border: 1,
                 borderColor: 'divider',
@@ -76,7 +80,7 @@ export default function CardEditor({
               <img
                 src={imageSrc}
                 alt={card.name}
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                 onError={(e) => {
                   // Missing art (e.g. a not-yet-drawn card in a partially
                   // shipped deck) falls back to the generated name placeholder.

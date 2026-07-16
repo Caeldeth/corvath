@@ -2,6 +2,12 @@ import { Box, Card, CardActionArea, Typography } from '@mui/material'
 import type { Deck, DeckCard } from '../../../../shared/types'
 import { cardPlaceholderDataUrl } from '../../lib/cardPlaceholder'
 
+// 2:3 — the aspect of the name placeholder and the Empyrean art, so those fill
+// the box exactly. Bundled decks disagree on aspect (Argent 0.71, RWS 0.58), so
+// the rest letterbox rather than crop.
+const THUMB_W = 150
+const THUMB_H = 225
+
 interface CardThumbProps {
   deck: Deck
   card: DeckCard
@@ -15,11 +21,11 @@ export default function CardThumb({ deck, card, onClick }: CardThumbProps) {
   const hasMeaning = !!(card.meaning && card.meaning.trim())
 
   return (
-    <Card sx={{ width: 104 }}>
+    <Card sx={{ width: THUMB_W }}>
       <CardActionArea onClick={onClick}>
         <Box
           sx={{
-            height: 150,
+            height: THUMB_H,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -33,7 +39,9 @@ export default function CardThumb({ deck, card, onClick }: CardThumbProps) {
           <img
             src={imageSrc}
             alt={card.name}
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            // `contain` so no art is cropped — deck scans vary in aspect ratio
+            // and rarely match the thumb box exactly (mirrors DrawCard).
+            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
             onError={(e) => {
               // Missing art (e.g. a not-yet-drawn card in a partially shipped
               // deck) falls back to the generated name placeholder.

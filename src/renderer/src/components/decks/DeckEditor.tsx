@@ -49,7 +49,7 @@ export default function DeckEditor({
 
   return (
     <Box sx={{ flexGrow: 1, height: '100%', overflowY: 'auto', p: 3 }}>
-      <Stack spacing={2.5} sx={{ maxWidth: 900, mx: 'auto' }}>
+      <Stack spacing={2.5} sx={{ maxWidth: 1400, mx: 'auto' }}>
         <TextField
           label="Deck name"
           value={deck.name}
@@ -94,7 +94,7 @@ export default function DeckEditor({
               <img
                 src={backSrc}
                 alt="Card back"
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
               />
             ) : (
               <ImageOutlinedIcon sx={{ opacity: 0.4 }} />

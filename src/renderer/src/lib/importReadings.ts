@@ -16,7 +16,7 @@ export const IMPORT_EXAMPLE = `[
   {
     "title": "Morning guidance",
     "date": "2026-06-16",
-    "deck": "Thoth",
+    "deck": "Argent Tarot",
     "layout": "Three Card",
     "source": "manual",
     "notes": "Overall narrative / interpretation goes here.",

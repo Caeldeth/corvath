@@ -19,14 +19,14 @@ import {
 import CasinoOutlinedIcon from '@mui/icons-material/CasinoOutlined'
 import ReplayIcon from '@mui/icons-material/Replay'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
-import type { Deck, DrawMode, Layout } from '../../../shared/types'
+import type { Deck, DeckSource, DrawMode, Layout } from '../../../shared/types'
 import {
   assembleReading,
   dealForCount,
   dealForLayout,
   drawPool,
   makeSeed,
-  shuffledDeck,
+  planFan,
   type DrawnCard
 } from '../lib/draw'
 import { useReadings } from '../hooks/useReadings'
@@ -45,6 +45,8 @@ type Structure = 'spread' | 'free'
 interface Slot {
   name: string
   positionId?: string
+  /** Set when the layout pins this slot to the top or bottom of the deck. */
+  source?: DeckSource
 }
 
 /** Frozen at shuffle time so tweaking the setup can't disturb an in-progress draw. */
@@ -58,6 +60,8 @@ interface Session {
   dealt: DrawnCard[]
   /** Fan mode: the full shuffled deck the user picks from. */
   fan: DrawnCard[]
+  /** Fan mode: slot index -> fan index, for slots the layout pins to an end. */
+  pinned: Record<number, number>
 }
 
 const today = (): string => new Date().toISOString().slice(0, 10)
@@ -91,7 +95,8 @@ export default function Draw({ decks, layouts, onDone }: DrawProps): ReactElemen
 
   const [session, setSession] = useState<Session | null>(null)
   const [revealed, setRevealed] = useState(0)
-  const [picks, setPicks] = useState<DrawnCard[]>([])
+  /** Fan mode, keyed by slot index — picks don't arrive in slot order once slots are pinned. */
+  const [picks, setPicks] = useState<Record<number, DrawnCard>>({})
   const [used, setUsed] = useState<Set<number>>(new Set())
   const [preview, setPreview] = useState<PreviewCard | null>(null)
 
@@ -172,8 +177,9 @@ export default function Draw({ decks, layouts, onDone }: DrawProps): ReactElemen
     const seed = makeSeed()
     const activeLayout = structure === 'spread' ? layout : null
     const slots: Slot[] = activeLayout
-      ? activeLayout.positions.map((p) => ({ name: p.name, positionId: p.id }))
+      ? activeLayout.positions.map((p) => ({ name: p.name, positionId: p.id, source: p.source }))
       : Array.from({ length: clampedCount }, (_, i) => ({ name: `Card ${i + 1}` }))
+    const { fan, pinned } = planFan(deck, activeLayout, seed)
     setSession({
       deck,
       layout: activeLayout,
@@ -183,25 +189,42 @@ export default function Draw({ decks, layouts, onDone }: DrawProps): ReactElemen
       dealt: activeLayout
         ? dealForLayout(deck, activeLayout, seed)
         : dealForCount(deck, clampedCount, seed),
-      fan: shuffledDeck(deck, seed)
+      fan,
+      pinned
     })
     setRevealed(0)
-    setPicks([])
-    setUsed(new Set())
+    // Pinned slots are decided by the shuffle, not the user — fill them up front
+    // and spend their cards so they can't also be picked out of the fan.
+    setPicks(
+      Object.fromEntries(Object.entries(pinned).map(([slot, fanIndex]) => [slot, fan[fanIndex]]))
+    )
+    setUsed(new Set(Object.values(pinned)))
   }
 
+  /** The slot the next fan pick fills: the lowest unpinned, unfilled one. */
+  const nextSlot = useMemo(() => {
+    if (!session) return undefined
+    const i = session.slots.findIndex((_s, idx) => !(idx in session.pinned) && !(idx in picks))
+    return i === -1 ? undefined : i
+  }, [session, picks])
+
   const pickFanCard = (index: number): void => {
-    if (!session || used.has(index) || picks.length >= session.slots.length) return
-    setPicks((p) => [...p, session.fan[index]])
+    if (!session || used.has(index) || nextSlot === undefined) return
+    setPicks((p) => ({ ...p, [nextSlot]: session.fan[index] }))
     setUsed((u) => new Set(u).add(index))
   }
 
   const drawnCount = session
     ? session.mode === 'deal'
       ? Math.min(revealed, session.slots.length)
-      : picks.length
+      : Object.keys(picks).length
     : 0
   const complete = session != null && drawnCount >= session.slots.length
+
+  // The fan prompt counts only the slots actually up to the user.
+  const pinnedCount = session ? Object.keys(session.pinned).length : 0
+  const freeSlots = session ? session.slots.length - pinnedCount : 0
+  const pickedFree = Object.keys(picks).length - pinnedCount
 
   const handleSave = (): void => {
     if (!session || !complete) return
@@ -212,7 +235,7 @@ export default function Draw({ decks, layouts, onDone }: DrawProps): ReactElemen
       drawMode: session.mode,
       seed: session.seed,
       layout: session.layout,
-      drawn: session.mode === 'deal' ? session.dealt : picks
+      drawn: session.mode === 'deal' ? session.dealt : session.slots.map((_s, i) => picks[i])
     })
     addReading(reading)
     onDone(reading.id)
@@ -223,8 +246,7 @@ export default function Draw({ decks, layouts, onDone }: DrawProps): ReactElemen
     if (!session) return <></>
     const assignedFor = (i: number): DrawnCard | undefined =>
       session.mode === 'deal' ? (i < revealed ? session.dealt[i] : undefined) : picks[i]
-    const isCurrent = (i: number): boolean =>
-      session.mode === 'fan' && i === picks.length && picks.length < session.slots.length
+    const isCurrent = (i: number): boolean => session.mode === 'fan' && i === nextSlot
 
     return (
       <Box
@@ -255,6 +277,14 @@ export default function Draw({ decks, layouts, onDone }: DrawProps): ReactElemen
               >
                 {slot.name}
               </Typography>
+              {session.mode === 'fan' && slot.source && (
+                <Typography
+                  variant="caption"
+                  sx={{ textAlign: 'center', lineHeight: 1.1, opacity: 0.6 }}
+                >
+                  {slot.source === 'bottom' ? 'from the bottom' : 'from the top'}
+                </Typography>
+              )}
               {card && (
                 <Typography variant="caption" sx={{ textAlign: 'center', lineHeight: 1.1 }}>
                   {card.name}
@@ -325,7 +355,7 @@ export default function Draw({ decks, layouts, onDone }: DrawProps): ReactElemen
   }
 
   const renderSetup = (): ReactElement => (
-    <Stack spacing={2.5} sx={{ maxWidth: 620, mx: 'auto', width: '100%' }}>
+    <Stack spacing={2.5} sx={{ maxWidth: 1100, mx: 'auto', width: '100%' }}>
       <Typography variant="h5">Draw a Reading</Typography>
       <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
         <TextField
@@ -421,7 +451,7 @@ export default function Draw({ decks, layouts, onDone }: DrawProps): ReactElemen
         <Typography variant="caption" sx={{ display: 'block', mt: 0.75, opacity: 0.6 }}>
           {mode === 'deal'
             ? 'Shuffles, then deals a card into each slot (honoring any top/bottom slots).'
-            : 'Shuffles and fans the deck face-down — pick one card for each slot.'}
+            : 'Shuffles and fans the deck face-down — pick one card for each slot. Slots pinned to the top or bottom of the deck are filled for you.'}
         </Typography>
       </Box>
 
@@ -460,13 +490,13 @@ export default function Draw({ decks, layouts, onDone }: DrawProps): ReactElemen
 
         {renderTray()}
 
-        {session.mode === 'fan' && !complete && (
+        {session.mode === 'fan' && !complete && nextSlot !== undefined && (
           <>
             <Divider />
             <Typography variant="body1" sx={{ textAlign: 'center' }}>
-              Pick a card for <strong>{session.slots[picks.length]?.name}</strong>{' '}
+              Pick a card for <strong>{session.slots[nextSlot].name}</strong>{' '}
               <Box component="span" sx={{ opacity: 0.6 }}>
-                ({picks.length + 1} of {session.slots.length})
+                ({pickedFree + 1} of {freeSlots})
               </Box>
             </Typography>
             {renderFan()}

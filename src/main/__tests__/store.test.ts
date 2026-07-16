@@ -91,9 +91,7 @@ describe('ensureDecksSeeded', () => {
     const s = stores()
     await s.ensureDecksSeeded(now)
     const decks = await s.loadDecks()
-    expect(decks.map((d) => d.id).sort()).toEqual(
-      ['argent', 'empyrean', 'hybrasyl', 'rws', 'thoth'].sort()
-    )
+    expect(decks.map((d) => d.id).sort()).toEqual(['argent', 'empyrean', 'hybrasyl', 'rws'].sort())
   })
 
   it('adds a missing built-in without disturbing user decks', async () => {
@@ -114,7 +112,7 @@ describe('ensureDecksSeeded', () => {
     await s.ensureDecksSeeded(now)
     const decks = await s.loadDecks()
     expect(decks.find((d) => d.id === 'my-deck')).toEqual(userDeck)
-    expect(decks.find((d) => d.id === 'thoth')).toBeTruthy()
+    expect(decks.find((d) => d.id === 'argent')).toBeTruthy()
   })
 
   it('replaces an older built-in when the seedVersion bumps', async () => {
@@ -144,11 +142,11 @@ describe('ensureDecksSeeded', () => {
     const s = stores()
     await s.ensureDecksSeeded(now)
     const decks = await s.loadDecks()
-    const thoth = decks.find((d) => d.id === 'thoth')!
-    const customized = { ...thoth, name: 'My Thoth' }
-    await s.saveDecks(decks.map((d) => (d.id === 'thoth' ? customized : d)))
+    const argent = decks.find((d) => d.id === 'argent')!
+    const customized = { ...argent, name: 'My Argent' }
+    await s.saveDecks(decks.map((d) => (d.id === 'argent' ? customized : d)))
     await s.ensureDecksSeeded(now)
-    expect((await s.loadDecks()).find((d) => d.id === 'thoth')!.name).toBe('My Thoth')
+    expect((await s.loadDecks()).find((d) => d.id === 'argent')!.name).toBe('My Argent')
   })
 
   it('preserves user meanings when a seedVersion bump merges (mergeSeedDeck)', async () => {
