@@ -138,6 +138,31 @@ describe('ensureDecksSeeded', () => {
     expect(rws.name).toBe('Rider-Waite-Smith')
   })
 
+  it('upgrades a built-in stored without a seedVersion at all', async () => {
+    const s = stores()
+    // Decks seeded before seedVersion existed have the field absent, which the
+    // merge reads as version 1 — so a spec at 2 must still upgrade them. This
+    // is the shape the hand-built hybrasyl deck was stored in.
+    const versionless: Deck = {
+      id: 'hybrasyl',
+      name: 'Hybrasyl',
+      builtIn: true,
+      suits: [],
+      pipRanks: [],
+      courtRanks: [],
+      supportsReversed: true,
+      cards: [],
+      createdAt: now,
+      updatedAt: now
+    }
+    await s.saveDecks([versionless])
+    await s.ensureDecksSeeded(now)
+    const hybrasyl = (await s.loadDecks()).find((d) => d.id === 'hybrasyl')!
+    expect(hybrasyl.seedVersion).toBe(2)
+    expect(hybrasyl.suits).toEqual(['Swords', 'Staves', 'Coins', 'Cups'])
+    expect(hybrasyl.cards).toHaveLength(83)
+  })
+
   it('leaves a customized built-in at the current seedVersion untouched', async () => {
     const s = stores()
     await s.ensureDecksSeeded(now)

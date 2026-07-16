@@ -183,12 +183,56 @@ const SPECS: DeckSpec[] = [
   {
     id: 'hybrasyl',
     name: 'Hybrasyl',
-    description: 'Custom Hybrasyl deck — define your own major arcana and suits.',
-    suits: [],
-    pipRanks: PIPS,
-    courtRanks: ['Knight', 'Queen', 'Prince', 'Princess'],
+    description:
+      'The Temuairan pantheon and its aisling world. 35 majors — the gods, then the ' +
+      'three that stand outside them — over four suits of eight, with mentors, guides, ' +
+      'speakers and dreamers for courts.',
+    suits: ['Swords', 'Staves', 'Coins', 'Cups'],
+    // A short suit: eight pips rather than ten.
+    pipRanks: ['Ace', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight'],
+    courtRanks: ['Mentor', 'Guide', 'Speaker', 'Dreamer'],
     supportsReversed: true,
-    majors: []
+    majors: [
+      'Deoch',
+      'Glioca',
+      'Cail',
+      'Luathas',
+      'Gramail',
+      'Fiosachd',
+      'Ceannlaidir',
+      'Sgrios',
+      'Grannos',
+      'Saothra',
+      'Céithe',
+      'Eolathe',
+      'Marcan',
+      'Lir',
+      'Leothne',
+      'Cairde',
+      'Oraithe Ridire',
+      'Neamhghlan',
+      'Codlaim',
+      'Dubh-Gabhar',
+      'Duibheagan',
+      'Fhala',
+      'Adhnann',
+      'Cin-Mhare',
+      'Diorradh',
+      'Bhàrnadh',
+      'Bodhrag',
+      'Cnortha',
+      'Duairce',
+      'Anaman',
+      'Cairrthir',
+      'Basnuall',
+      'Chadul',
+      'Danaan',
+      'Grinneal'
+    ],
+    // Bumped to push the structure over the older empty copy. Art is still in
+    // progress: leave imageExt/back unset until it lands, or every card would
+    // claim an image file that doesn't exist.
+    seedVersion: 2
   }
 ]
 
