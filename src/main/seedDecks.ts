@@ -176,7 +176,8 @@ const SPECS: DeckSpec[] = [
     majors: THOTH_MAJORS,
     imageExt: 'webp',
     back: 'back.webp',
-    seedVersion: 1
+    // 2: seeded card meanings + keywords.
+    seedVersion: 2
   },
   {
     id: 'rws',
@@ -218,7 +219,8 @@ const SPECS: DeckSpec[] = [
     // A short suit: eight pips rather than ten.
     pipRanks: ['Ace', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight'],
     courtRanks: ['Mentor', 'Guide', 'Speaker', 'Dreamer'],
-    supportsReversed: true,
+    // Like the Argent and the Empyrean, this deck is read upright only.
+    supportsReversed: false,
     majors: [
       'Deoch',
       'Glioca',

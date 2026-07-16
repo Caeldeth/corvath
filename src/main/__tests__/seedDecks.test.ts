@@ -70,7 +70,7 @@ describe('buildSeedDecks — hybrasyl', () => {
     // 35 majors + 4 suits x (8 pips + 4 courts).
     expect(majors).toHaveLength(35)
     expect(minors).toHaveLength(48)
-    expect(d.supportsReversed).toBe(true)
+    expect(d.supportsReversed).toBe(false)
   })
 
   it('numbers the majors in pantheon order', () => {
