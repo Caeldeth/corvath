@@ -140,16 +140,6 @@ interface DeckSpec {
 
 const SPECS: DeckSpec[] = [
   {
-    id: 'thoth',
-    name: 'Thoth',
-    description: 'Crowley–Harris Thoth deck. 78 cards; reversals off by default.',
-    suits: ['Wands', 'Cups', 'Swords', 'Disks'],
-    pipRanks: PIPS,
-    courtRanks: ['Knight', 'Queen', 'Prince', 'Princess'],
-    supportsReversed: false,
-    majors: THOTH_MAJORS
-  },
-  {
     id: 'argent',
     name: 'Argent Tarot',
     description: 'Original-art deck on the Thoth structure. 78 cards; reversals off by default.',

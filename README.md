@@ -8,8 +8,9 @@ overall interpretation. Readings can be **imported** from JSON (file or paste) �
 bringing in readings authored elsewhere.
 
 A **deck builder** (Decks tab) defines the decks: structure-agnostic, so it handles standard
-decks (Thoth — seeded; Rider-Waite-Smith — seeded with full public-domain JPG art + card
-back), the **Empyrean** deck (an original Thoth-adjacent deck with custom court ranks that
+decks (Rider-Waite-Smith — seeded with full public-domain JPG art + card back), the **Argent
+Tarot** (an original-art deck on the Thoth structure, bundled under `bundled/decks/argent/`),
+the **Empyrean** deck (an original Thoth-adjacent deck with custom court ranks that
 ships with full 78-card WebP art plus a card back under `bundled/decks/empyrean/`), and custom
 ones like the Hybrasyl deck with an arbitrary
 number of major arcana and custom suit/court names. Each card can hold meanings, keywords, and
