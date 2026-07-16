@@ -4,6 +4,7 @@ import { tmpdir } from 'os'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { Deck } from '../../shared/types'
 import { createStores, mergeSeedDeck, resolveWithin, safeSegment } from '../store'
+import { buildSeedDecks } from '../seedDecks'
 
 let dir: string
 let bundled: string
@@ -86,6 +87,8 @@ describe('readings/decks/layouts normalize', () => {
 
 describe('ensureDecksSeeded', () => {
   const now = '2026-07-09T00:00:00.000Z'
+  /** The deck as currently specced — avoids hardcoding a seedVersion that moves. */
+  const currentSeed = (id: string): Deck => buildSeedDecks(now).find((d) => d.id === id)!
 
   it('seeds all built-ins on first run', async () => {
     const s = stores()
@@ -134,7 +137,7 @@ describe('ensureDecksSeeded', () => {
     await s.saveDecks([stale])
     await s.ensureDecksSeeded(now)
     const rws = (await s.loadDecks()).find((d) => d.id === 'rws')!
-    expect(rws.seedVersion).toBe(2)
+    expect(rws.seedVersion).toBe(currentSeed('rws').seedVersion)
     expect(rws.name).toBe('Rider-Waite-Smith')
   })
 
@@ -174,28 +177,34 @@ describe('ensureDecksSeeded', () => {
     expect((await s.loadDecks()).find((d) => d.id === 'argent')!.name).toBe('My Argent')
   })
 
-  it('preserves user meanings when a seedVersion bump merges (mergeSeedDeck)', async () => {
+  it('delivers seeded card text over the stored copy on a bump', async () => {
     const s = stores()
     await s.ensureDecksSeeded(now)
     const decks = await s.loadDecks()
-    // Take the current rws, add a user meaning to its first major, and roll the
-    // stored seedVersion back so the next seed pass counts as an upgrade.
+    // Take the current rws, overwrite a major's text, and roll the stored
+    // seedVersion back so the next seed pass counts as an upgrade.
     const rws = decks.find((d) => d.id === 'rws')!
     const foolId = rws.cards[0].id
-    const withMeaning: Deck = {
+    const edited: Deck = {
       ...rws,
       seedVersion: 1,
       cards: rws.cards.map((c) =>
         c.id === foolId ? { ...c, meaning: 'my note', keywords: ['mine'] } : c
       )
     }
-    await s.saveDecks(decks.map((d) => (d.id === 'rws' ? withMeaning : d)))
+    await s.saveDecks(decks.map((d) => (d.id === 'rws' ? edited : d)))
     await s.ensureDecksSeeded(now)
+
     const merged = (await s.loadDecks()).find((d) => d.id === 'rws')!
-    expect(merged.seedVersion).toBe(2) // structure updated
+    expect(merged.seedVersion).toBe(currentSeed('rws').seedVersion)
+
+    // preferSeedString: a non-empty seed value wins. Now that rws ships text,
+    // an upgrade replaces a user's edit on a built-in card rather than keeping
+    // it — the fallback-to-user path only fires where the seed stays silent,
+    // which the pure mergeSeedDeck tests below cover directly.
     const fool = merged.cards.find((c) => c.id === foolId)!
-    expect(fool.meaning).toBe('my note') // user note preserved (seed leaves it empty)
-    expect(fool.keywords).toEqual(['mine'])
+    expect(fool.meaning).toBe(currentSeed('rws').cards[0].meaning)
+    expect(fool.meaning).not.toBe('my note')
   })
 })
 

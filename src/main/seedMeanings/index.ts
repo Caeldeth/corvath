@@ -1,4 +1,5 @@
 import type { DeckMeanings } from './types'
+import { RWS_MEANINGS } from './rws'
 
 /**
  * Seeded card text, per built-in deck id. A deck with no entry here ships with
@@ -7,6 +8,8 @@ import type { DeckMeanings } from './types'
  * Adding or changing text here requires bumping that deck's `seedVersion` in
  * seedDecks.ts, or existing installs keep the copy they already have.
  */
-export const SEED_MEANINGS: Record<string, DeckMeanings> = {}
+export const SEED_MEANINGS: Record<string, DeckMeanings> = {
+  rws: RWS_MEANINGS
+}
 
 export type { CardMeaning, DeckMeanings } from './types'

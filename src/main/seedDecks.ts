@@ -189,7 +189,8 @@ const SPECS: DeckSpec[] = [
     majors: RWS_MAJORS,
     imageExt: 'jpg',
     back: 'back.png',
-    seedVersion: 2
+    // 3: seeded card meanings + keywords.
+    seedVersion: 3
   },
   {
     id: 'empyrean',
