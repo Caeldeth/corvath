@@ -1,42 +1,48 @@
 name: Release
 
-# Cribbed from hyb-electron-template, trimmed to corvath's shape: this app ships
-# a single Windows portable exe (electron-builder.yml declares no mac/linux
-# targets), so the sibling build-linux/build-mac jobs and their signing +
-# notarization apparatus are deliberately absent.
+# Builds and publishes a tagged release. The PR gate lives in ci.yml — do NOT
+# add a `pull_request` trigger here: this workflow builds and signs three
+# platforms and no PR needs that. (It used to carry the gate, which is why the
+# validate job below is now only a pre-release sanity check rather than the
+# only thing standing between a PR and main.)
 #
-# Optional repository secrets:
-#   ES_USERNAME / ES_PASSWORD / ES_CREDENTIAL_ID / ES_TOTP_SECRET  (SSL.com eSigner)
-#     — when unset, the exe ships UNSIGNED and SmartScreen will warn on first run.
-#       Unlike the siblings, the signing step here is guarded rather than assumed.
-#   DISCORD_WEBHOOK_URL                                            (release announcement)
+# Optional repository secrets — every one of them is guarded, so a release
+# without them still produces usable, unsigned artifacts:
+#   ES_USERNAME / ES_PASSWORD / ES_CREDENTIAL_ID / ES_TOTP_SECRET  (SSL.com eSigner, Windows)
+#     — when unset, the exe ships UNSIGNED and SmartScreen warns on first run.
+#   APPLE_ID / APPLE_APP_SPECIFIC_PASSWORD / APPLE_TEAM_ID          (notarization, macOS)
+#   CSC_LINK / CSC_KEY_PASSWORD                                     (Developer ID cert, macOS)
+#     — when unset, the dmg is unsigned and Gatekeeper warns. Flip
+#       `mac.notarize` to true in electron-builder.yml once these exist.
+#   DISCORD_WEBHOOK_URL                                             (release announcement)
 
 on:
   push:
     tags:
       - 'v*'
-  pull_request:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: write
 
 env:
+  # Kept for sslcom/esigner-codesign@v1.3.2, which still declares `using: node20`.
+  # Every actions/* pin below is Node 24 native, so this env exists for that one
+  # action alone — do not delete it as boilerplate while that pin remains.
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  # Fast validation gate — runs on every PR to main (and before any release
-  # build). This is the only place typecheck / lint / format / tests are
-  # enforced, so don't drop it.
+  # Fast sanity gate before three platform builds start. ci.yml is the real gate
+  # on the way into main; this catches a tag cut from a broken commit.
   validate:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
+          cache: npm
 
       - name: Install dependencies
         run: npm ci
@@ -56,13 +62,13 @@ jobs:
   build-windows:
     runs-on: windows-latest
     needs: validate
-    if: github.event_name != 'pull_request'
 
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
+          cache: npm
 
       - name: Install dependencies
         run: npm ci
@@ -108,24 +114,112 @@ jobs:
           override: true
 
       - name: Upload Windows artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: windows-portable
           path: dist/*-portable.exe
           if-no-files-found: error
+          # 1 day, not the 90-day default. These exist only to hand packages to
+          # the `release` job minutes later; the published Release keeps its own
+          # copy and release assets do not count against Actions storage. Three
+          # 90-day releases were enough to exhaust the quota on a sibling, which
+          # then failed every build job and published nothing.
+          retention-days: 1
+
+  build-mac:
+    runs-on: macos-latest
+    needs: validate
+
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build app
+        run: npm run build
+
+      # Same probe-into-an-output trick as the Windows signing step above: the
+      # secrets context is not usable in a step-level `if:`.
+      - name: Check for signing credentials
+        id: signing
+        run: |
+          if [ -n "$CSC_LINK" ]; then
+            echo 'enabled=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'enabled=false' >> "$GITHUB_OUTPUT"
+            echo '::warning::No Developer ID certificate set — shipping an UNSIGNED dmg.'
+          fi
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+
+      # A universal dmg (x64 + arm64 in one). electron-builder signs when
+      # CSC_LINK is present and notarizes when mac.notarize is true and the
+      # APPLE_* vars are set; with neither it produces an unsigned dmg instead
+      # of failing, which is what we want until the certificates exist.
+      - name: Package dmg
+        run: npx electron-builder --mac --publish never
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: macos-dmg
+          path: dist/*.dmg
+          if-no-files-found: error
+          retention-days: 1
+
+  build-linux:
+    runs-on: ubuntu-latest
+    needs: validate
+
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build app
+        run: npm run build
+
+      - name: Package AppImage + deb
+        run: npx electron-builder --linux --publish never
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: linux-packages
+          path: |
+            dist/*.AppImage
+            dist/*.deb
+          if-no-files-found: error
+          retention-days: 1
 
   release:
     runs-on: ubuntu-latest
-    needs: [build-windows]
+    needs: [build-windows, build-mac, build-linux]
     if: github.ref_type == 'tag'
 
     steps:
       # Checkout (the release job otherwise only downloads artifacts) so the
       # CHANGELOG + extract script are on disk.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: artifacts
 
@@ -135,10 +229,13 @@ jobs:
         run: node scripts/changelog-extract.mjs "${{ github.ref_name }}" > RELEASE_NOTES.md
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: |
             artifacts/**/*-portable.exe
+            artifacts/**/*.dmg
+            artifacts/**/*.AppImage
+            artifacts/**/*.deb
           # Curated CHANGELOG section on top; generate_release_notes appends the
           # auto PR list + Full Changelog link below it.
           body_path: RELEASE_NOTES.md

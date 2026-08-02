@@ -1,0 +1,90 @@
+name: CI
+
+# Split out of release.yml, which carried the only gate this repo had. Two
+# reasons it belongs in its own file: release.yml fires on a `v*` tag, so its
+# PR trigger was doing unrelated work in a workflow named "Release", and a
+# tag-triggered run cannot usefully cancel in-flight while a CI run can.
+on:
+  pull_request:
+  # Gate every route into main, not just PRs. A PR-only gate is a gate with a
+  # documented bypass — a direct push to main was previously unchecked until the
+  # next release tag.
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  # A new push cancels the in-flight run for the same branch/PR. Safe here and
+  # wasteful nowhere — unlike release.yml, a cancelled check loses nothing.
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    # No native addon, so ubuntu is fine and finishes faster than windows.
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint:check
+
+      - name: Format check
+        run: npm run format:check
+
+      - name: Test + coverage gate
+        run: npm run test:coverage
+
+      # Production dependencies only, high and above. Both narrowings are
+      # load-bearing: eslint, vite and electron-builder do not ship, so an
+      # advisory in one is something to schedule rather than something that
+      # should red an unrelated PR. A gate that cries wolf gets deleted, and
+      # then there is no gate.
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+
+  e2e:
+    # windows-latest, not ubuntu: these specs drive a real Electron window and
+    # read OS window geometry. Windows runners have a desktop session, so no
+    # xvfb wrapper is needed (creidhne reached the same conclusion).
+    runs-on: windows-latest
+    needs: validate
+
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # `npm run e2e` builds first; the specs load out/main/index.js.
+      - name: End-to-end tests
+        run: npm run e2e
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          # A debugging artifact, so it outlives the run — unlike the release
+          # build artifacts, which are consumed minutes later (see release.yml).
+          retention-days: 7
+          if-no-files-found: ignore

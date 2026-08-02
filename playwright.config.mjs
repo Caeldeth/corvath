@@ -4,8 +4,9 @@ import { defineConfig } from '@playwright/test'
 // `npm run build` first — the `e2e` npm script does this for you. Electron
 // allows one app instance per launch and the specs read real OS window
 // geometry, so keep this fully serial (workers: 1, no retries hiding
-// flakiness). Local-only for now: CI would need a virtual display (xvfb/headed).
-// See e2e/README.md and Comhaigne/docs/architecture/e2e-playwright-electron.md.
+// flakiness). Runs in CI on windows-latest (see .github/workflows/ci.yml):
+// Windows runners have a desktop session, so no xvfb wrapper is needed.
+// See e2e/README.md and the document repo's e2e-playwright-electron.md.
 export default defineConfig({
   testDir: './e2e',
   testMatch: '**/*.spec.js',
