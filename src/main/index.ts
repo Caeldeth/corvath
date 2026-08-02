@@ -2,11 +2,14 @@ import { app, shell, BrowserWindow, dialog, ipcMain, protocol } from 'electron'
 import { join, extname } from 'path'
 import { readFile } from 'fs/promises'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-import icon from '../../resources/corvath.png?asset'
+// 256px PNG32, not the 1254px master — this is the window/taskbar icon, and the
+// master is build-time only (electron-builder reads it from build/icon.png).
+import icon from '../../resources/corvath-icon-256.png?asset'
 import { createStores } from './store'
 import { createSplashWindow } from './splash'
 import { registerHandlers } from './handlers'
 import { checkForUpdate } from './updateCheck'
+import { guardIpc, hardenWindow, initWindowSecurity, registerTrustedWindow } from './windowSecurity'
 
 // Everything — readings, decks, settings, and the disposable Electron cache —
 // lives under %LOCALAPPDATA%/Erisco/Corvath. On Windows Electron's appData path
@@ -103,18 +106,27 @@ function createWindow(): void {
     title: 'Corvath Tarot',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false
+      // Checked, not assumed. The preload uses no node built-ins, but that alone
+      // does NOT make it sandbox-safe: externalizeDepsPlugin was leaving
+      // `require("@electron-toolkit/preload")` in the built output, and a
+      // sandboxed preload can only require electron. The vite preload config now
+      // bundles that package instead of externalizing it, so `require("electron")`
+      // is all that remains — verified against out/preload/index.js.
+      sandbox: true
     }
+  })
+
+  // Trusted before anything loads, so the first IPC from this window is accepted
+  // and nothing else is.
+  registerTrustedWindow(mainWindow)
+  hardenWindow(mainWindow, {
+    allowExternal: true,
+    openExternal: (url) => void shell.openExternal(url)
   })
 
   // Keep the renderer's maximize/restore icon in sync with the actual state.
   mainWindow.on('maximize', () => mainWindow?.webContents.send('window:maximizeChange', true))
   mainWindow.on('unmaximize', () => mainWindow?.webContents.send('window:maximizeChange', false))
-
-  mainWindow.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url)
-    return { action: 'deny' }
-  })
 
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
@@ -127,6 +139,13 @@ function createWindow(): void {
 
 app.whenReady().then(async () => {
   electronApp.setAppUserModelId('co.eris.corvath')
+
+  // Establish what counts as "our own content" BEFORE any window loads. Until
+  // this runs the trusted set is empty, which fails closed.
+  initWindowSecurity(
+    is.dev ? process.env['ELECTRON_RENDERER_URL'] : undefined,
+    join(__dirname, '../renderer/index.html')
+  )
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
@@ -145,7 +164,13 @@ app.whenReady().then(async () => {
   // All IPC channels (data persistence, image import/cleanup, window controls,
   // and the app:ready reveal handshake) live in handlers.ts. Reveal has a 15 s
   // backstop in case the renderer never signals.
-  registerHandlers({ ipcMain, BrowserWindow, dialog }, { store, onAppReady: revealMainWindow })
+  // guardIpc wraps ipcMain once, here — every channel registered inside
+  // registerHandlers is covered by construction, so a new handler cannot forget
+  // to validate its sender.
+  registerHandlers(
+    { ipcMain: guardIpc(ipcMain), BrowserWindow, dialog },
+    { store, onAppReady: revealMainWindow }
+  )
   setTimeout(revealMainWindow, 15000)
 
   createWindow()
