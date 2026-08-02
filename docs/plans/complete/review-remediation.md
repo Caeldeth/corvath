@@ -1,5 +1,16 @@
 # Corvath review remediation plan
 
+> **SHIPPED — all of Phases 0-7 landed.** Kept as a record. Two corrections found when this
+> was filed under `complete/` (2026-08-01), because a deferred note ages:
+>
+> - Phase 2's acceptance names `%APPDATA%\Themisco\Corvath`. That path never existed. The app
+>   writes to `%LOCALAPPDATA%\Erisco\Corvath` — a local dir, not roaming, under the Erisco
+>   vendor name settled in the 1.0 branding pass.
+> - The "out of scope, do not do" list at the top is now largely DONE and must not be read as
+>   current policy: the appId change, the CI release pipeline, `.corvathdeck` export/import,
+>   and the mac/linux targets have all since shipped. Only the Game-Icons title bar is still
+>   deferred — it lives in [00a-backlog.md](../00a-backlog.md) now.
+
 Handoff plan from the 2026-07-09 full review (template comparison, architecture-doc
 compliance, bug hunt, theme parity). Work through the phases in order — each phase is
 independently shippable and leaves the app green (`npm run typecheck`, and once Phase 0

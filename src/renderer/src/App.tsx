@@ -106,6 +106,7 @@ function App(): React.JSX.Element {
       <ThemeProvider theme={theme}>
         <CssBaseline />
         <Box
+          data-testid="app-hydrating"
           sx={{
             height: '100vh',
             display: 'flex',
@@ -124,6 +125,8 @@ function App(): React.JSX.Element {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Box
+        data-testid="app-root"
+        data-theme={themeName}
         sx={{
           height: '100vh',
           display: 'flex',

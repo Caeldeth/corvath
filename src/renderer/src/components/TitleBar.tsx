@@ -15,6 +15,10 @@ import FilterNoneIcon from '@mui/icons-material/FilterNone'
 import CloseIcon from '@mui/icons-material/Close'
 import type { ThemeName } from '../../../shared/types'
 import { PLAIN_CHROME_THEMES, THEME_OPTIONS } from '../themes'
+// 64px WebP for a 22px render, imported so vite fingerprints and bundles it. The
+// previous `BASE_URL + 'corvath.png'` pulled the 1254px/2.36 MB master out of the
+// publicDir, which also meant a second copy of it in the packaged app.
+import logoUrl from '../assets/corvath.webp'
 
 // Interactive controls must opt out of the window-drag region.
 const noDrag = { WebkitAppRegion: 'no-drag' } as const
@@ -54,10 +58,10 @@ export default function TitleBar({ themeName, onThemeChange }: TitleBarProps) {
 
   return (
     <AppBar position="static" elevation={0} sx={{ WebkitAppRegion: 'drag', userSelect: 'none' }}>
-      <Toolbar variant="dense" sx={{ minHeight: 40, px: 1.5 }}>
+      <Toolbar data-testid="title-bar" variant="dense" sx={{ minHeight: 40, px: 1.5 }}>
         <Box
           component="img"
-          src={`${import.meta.env.BASE_URL}corvath.png`}
+          src={logoUrl}
           alt=""
           sx={{ width: 22, height: 22, mr: 1.5, borderRadius: '4px', display: 'block' }}
         />
@@ -75,6 +79,7 @@ export default function TitleBar({ themeName, onThemeChange }: TitleBarProps) {
           value={themeName}
           onChange={(e) => onThemeChange(e.target.value as ThemeName)}
           aria-label="theme"
+          data-testid="theme-select"
           sx={selectSx}
         >
           {THEME_OPTIONS.map((option) => (

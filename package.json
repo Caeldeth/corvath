@@ -7,8 +7,11 @@
   "scripts": {
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
+    "e2e": "npm run build && playwright test",
+    "e2e:only": "playwright test",
     "typecheck": "tsc --build",
     "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "lint": "eslint . --fix",
     "lint:check": "eslint .",
     "start": "electron-vite preview",
@@ -18,9 +21,70 @@
     "build:win": "npm run build && electron-builder --win",
     "build:unpack": "npm run build && electron-builder --dir"
   },
+  "_dependenciesNote": [
+    "`dependencies` holds EXACTLY what main and preload require at run time, and nothing",
+    "else. electron-builder copies every entry here into app.asar verbatim, but only main",
+    "and preload are externalized (`externalizeDepsPlugin`) -- the renderer config has no",
+    "externals, so vite already bundles every UI library into out/renderer. A renderer-only",
+    "package left here therefore ships TWICE: once compiled into the renderer bundle, once",
+    "as unbundled source nothing loads.",
+    "",
+    "@mui/icons-material alone was 32,259 of the asar's 38,673 entries. MUI, @emotion/*,",
+    "@fontsource/* and zustand moved to devDependencies for that reason; react/react-dom",
+    "were already there.",
+    "",
+    "@electron-toolkit/preload is a devDependency because the preload BUNDLES it rather",
+    "than externalizing it (see the preload config in electron.vite.config.mjs) -- a",
+    "sandboxed preload can only require electron, so leaving it external broke the bridge.",
+    "If that exclusion is ever removed, it must move back here or the app fails at boot.",
+    "",
+    "Before moving anything else here, check all three: a static import in src/main or",
+    "src/preload, an `await import()` (invisible to a `from '...'` grep, and the far more",
+    "common trap), and a `createRequire(...)` call. A package that is rollup-external is",
+    "NEVER bundled, so demoting it fails at boot rather than at build."
+  ],
   "dependencies": {
-    "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
+    "fflate": "^0.8.3",
+    "zod": "^4.4.3"
+  },
+  "_overridesNote": [
+    "brace-expansion carries two high-severity DoS advisories (GHSA-3jxr-9vmj-r5cp,",
+    "GHSA-mh99-v99m-4gvg), reaching us only through dev tooling and the packaging step.",
+    "Nothing that ships to a user is affected.",
+    "",
+    "SCOPED PER MAJOR ON PURPOSE. The advisory is patched WITHIN every major -- 1.1.18,",
+    "2.1.4, 5.0.9 -- so every consumer stays on the line it was written against. npm",
+    "resolves a name@range selector against the RESOLVED version, so minimatch 3.x gets a",
+    "callable default export while minimatch 10.x keeps the 5.x copy whose named `expand`",
+    "it imports.",
+    "",
+    "All three lines were vulnerable here, unlike the sibling repos that only needed 1.x:",
+    "1.1.15 under @electron/asar and dir-compare, 1.1.16 under eslint, 2.1.1 under",
+    "@electron/universal and filelist, 5.0.6 under electron-builder's minimatch 10.",
+    "",
+    "DO NOT collapse these into a bare `brace-expansion` override. 5.x changed its export",
+    "shape -- 1.x/2.x are `module.exports = expand`, 5.x is `module.exports = { expand,",
+    "... }` -- and minimatch 3.x does `var expand = require('brace-expansion')` then calls",
+    "it. A global override breaks EVERY minimatch 3.x consumer: eslint, @eslint/eslintrc,",
+    "eslint-plugin-react, @electron/asar, dir-compare and glob. It fails only for a pattern",
+    "CONTAINING BRACES, because minimatch 3.x short-circuits braceExpand otherwise -- so it",
+    "hides. @electron/asar and dir-compare run during packaging, where a passing build",
+    "proves nothing unless the globs happened to carry braces.",
+    "",
+    "Nothing to unwind later: each selector stops matching once the last consumer pinned to",
+    "that major is gone."
+  ],
+  "overrides": {
+    "brace-expansion@1": "^1.1.18",
+    "brace-expansion@2": "^2.1.4",
+    "brace-expansion@5": "^5.0.9"
+  },
+  "devDependencies": {
+    "@electron-toolkit/eslint-config-prettier": "^3.0.0",
+    "@electron-toolkit/eslint-config-ts": "^3.1.0",
+    "@electron-toolkit/preload": "^3.0.2",
+    "@electron-toolkit/tsconfig": "^1.0.1",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "@fontsource/cinzel": "^5.2.8",
@@ -28,14 +92,7 @@
     "@fontsource/crimson-pro": "^5.2.8",
     "@mui/icons-material": "^9.2.0",
     "@mui/material": "^9.2.0",
-    "fflate": "^0.8.3",
-    "zod": "^4.4.3",
-    "zustand": "^5.0.14"
-  },
-  "devDependencies": {
-    "@electron-toolkit/eslint-config-prettier": "^3.0.0",
-    "@electron-toolkit/eslint-config-ts": "^3.1.0",
-    "@electron-toolkit/tsconfig": "^1.0.1",
+    "@playwright/test": "^1.61.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
@@ -56,6 +113,7 @@
     "react-dom": "^19.2.7",
     "typescript": "^5.7.0",
     "vite": "^7.3.6",
-    "vitest": "^4.1.5"
+    "vitest": "^4.1.5",
+    "zustand": "^5.0.14"
   }
 }

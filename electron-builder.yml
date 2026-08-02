@@ -1,29 +1,105 @@
 appId: co.eris.corvath
 productName: Corvath Tarot
-icon: resources/corvath.png
+# The 1254px master is BUILD-TIME ONLY, so it lives in buildResources (build/) and is
+# never packaged. The runtime derivatives in resources/ are sized to what draws them:
+# corvath-icon-256.png (window/taskbar) and corvath-splash.webp (84px splash glyph).
+icon: build/icon.png
 directories:
   buildResources: build
+# ALLOWLIST, not a denylist. electron-builder includes the whole project directory
+# by default; the scaffold's negation list only subtracted from it, so every top-level
+# directory added since (coverage/, docs/, e2e/, scripts/, test-results/, .claude/, the
+# tsconfigs and both .tsbuildinfo) shipped inside app.asar. A denylist leaks the moment
+# somebody adds a directory; an allowlist cannot.
+#
+# The trade is that a new runtime asset must be NAMED here or it silently does not ship.
+# That is the mechanism working, not a bug -- it makes a runtime dependency an explicit
+# decision instead of an accident. Say why each entry is here.
 files:
-  - '!**/.vscode/*'
-  - '!src/*'
-  - '!electron.vite.config.{js,ts,mjs,cjs}'
-  - '!{.eslintignore,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
-  - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
+  - out/** # the built main / preload / renderer bundles
+  - resources/** # splash.html + the window/splash icon; also the renderer publicDir
+  - node_modules/** # main+preload runtime deps only (see _dependenciesNote in package.json)
+  - package.json # electron reads name/version/main at boot
+  - bundled/** # shipped deck art, read at runtime from <appRoot>/bundled/decks/
+# `bundled/` is 83 MB of deck art. Keep it OUT of the asar so it is read as ordinary
+# files (main resolves it via join(__dirname, '../../bundled/decks')) and so the archive
+# stays small enough to be cheap to open.
 asarUnpack:
   - bundled/**
 win:
   executableName: corvath
-  # 1.0 ships a single portable exe. Re-enable nsis (and add mac/linux) later by
-  # adding entries here — the nsis block below is kept ready for that.
+  # 1.0 ships a single portable exe. The nsis block below is kept ready to be
+  # added back to this list.
   target:
     - target: portable
       arch:
         - x64
 portable:
   artifactName: ${name}-${version}-portable.${ext}
+  # The portable exe is an NSIS self-extracting archive that decompresses to
+  # %TEMP% BEFORE electron exists, so no in-app splash can cover it — without
+  # this the stub runs silent and the user gets several seconds of nothing.
+  # A FROZEN FRAME of resources/splash.html at the same 420x260 as the splash
+  # BrowserWindow, so the handoff reads as one boot rather than two screens.
+  # Regenerate with: node scripts/make-portable-splash.mjs
+  splashImage: build/portable-splash.bmp
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
+
+# mac/linux are scaffolded ahead of signing. The CI jobs build them on every
+# release; the mac job signs and notarizes only when Apple credentials exist, so
+# an unsigned build still produces a usable artifact until they do.
+mac:
+  category: public.app-category.lifestyle
+  # Its own art, NOT the Windows master: macOS does not mask app icons, so the
+  # icon must already carry Apple's grid — art inset to 824/1024 of the canvas
+  # and masked to a continuous-corner squircle. Derived from the document repo's
+  # macOS variant; see docs/plans for the recipe.
+  icon: build/icon-mac.png
+  target:
+    - target: dmg
+      arch:
+        - universal
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  # Flip to true once APPLE_ID / APPLE_APP_SPECIFIC_PASSWORD / APPLE_TEAM_ID are
+  # set as repository secrets. Left false deliberately: with notarization on and
+  # no credentials, the build FAILS rather than degrading to unsigned.
+  notarize: false
+dmg:
+  artifactName: ${name}-${version}.${ext}
+linux:
+  # The square master is right here — Linux desktop environments draw the icon
+  # as-is with no platform mask.
+  icon: build/icon.png
+  category: Utility
+  synopsis: Tarot reading recorder
+  target:
+    - target: AppImage
+      arch:
+        - x64
+    - target: deb
+      arch:
+        - x64
+appImage:
+  artifactName: ${name}-${version}.${ext}
+deb:
+  artifactName: ${name}-${version}.${ext}
+
 npmRebuild: false
+
+# Turn off the escape hatches built into the shipped Electron binary. Native
+# electron-builder config, never an afterPack hook: on a mac universal build the
+# per-arch packs must stay pristine, and a per-arch hook corrupts the merge with
+# an "identical SHAs" failure.
+electronFuses:
+  runAsNode: false # no ELECTRON_RUN_AS_NODE -> the exe cannot be used as a node shell
+  enableNodeCliInspectArguments: false # no --inspect into the main process
+  enableNodeOptionsEnvironmentVariable: false # no NODE_OPTIONS injection at launch
+  onlyLoadAppFromAsar: true # refuse a side-loaded app/ dir next to the asar
+  resetAdHocDarwinSignature: true # required once fuses are flipped on mac arm64

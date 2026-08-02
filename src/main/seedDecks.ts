@@ -1,4 +1,6 @@
 import type { Deck, DeckCard } from '../shared/types'
+import type { CardMeaning, DeckMeanings } from './seedMeanings/types'
+import { SEED_MEANINGS } from './seedMeanings'
 
 const PIPS = ['Ace', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten']
 
@@ -85,16 +87,34 @@ function slug(value: string): string {
     .replace(/^-+|-+$/g, '')
 }
 
-function buildMajors(names: string[], imageExt?: string): DeckCard[] {
+/**
+ * Fold seeded text onto a card. Empty/absent fields are omitted rather than set
+ * to '' so the merge on a seedVersion bump keeps deferring to the user's own
+ * text for anything the seed doesn't say (see preferSeedString in store.ts).
+ */
+function withMeaning(card: DeckCard, text: CardMeaning | undefined): DeckCard {
+  if (!text) return card
+  return {
+    ...card,
+    ...(text.meaning ? { meaning: text.meaning } : {}),
+    ...(text.meaningReversed ? { meaningReversed: text.meaningReversed } : {}),
+    ...(text.keywords?.length ? { keywords: text.keywords } : {})
+  }
+}
+
+function buildMajors(names: string[], imageExt?: string, meanings?: DeckMeanings): DeckCard[] {
   return names.map((name, number) => {
     const id = `maj-${number}`
-    return {
-      id,
-      section: 'major' as const,
-      name,
-      number,
-      ...(imageExt ? { image: `${id}.${imageExt}` } : {})
-    }
+    return withMeaning(
+      {
+        id,
+        section: 'major' as const,
+        name,
+        number,
+        ...(imageExt ? { image: `${id}.${imageExt}` } : {})
+      },
+      meanings?.majors?.[name]
+    )
   })
 }
 
@@ -102,20 +122,26 @@ function buildMinors(
   suits: string[],
   pipRanks: string[],
   courtRanks: string[],
-  imageExt?: string
+  imageExt?: string,
+  meanings?: DeckMeanings
 ): DeckCard[] {
   const cards: DeckCard[] = []
   for (const suit of suits) {
     for (const rank of [...pipRanks, ...courtRanks]) {
       const id = `${slug(suit)}-${slug(rank)}`
-      cards.push({
-        id,
-        section: 'minor',
-        name: `${rank} of ${suit}`,
-        suit,
-        rank,
-        ...(imageExt ? { image: `${id}.${imageExt}` } : {})
-      })
+      cards.push(
+        withMeaning(
+          {
+            id,
+            section: 'minor',
+            name: `${rank} of ${suit}`,
+            suit,
+            rank,
+            ...(imageExt ? { image: `${id}.${imageExt}` } : {})
+          },
+          meanings?.minors?.[id]
+        )
+      )
     }
   }
   return cards
@@ -150,7 +176,8 @@ const SPECS: DeckSpec[] = [
     majors: THOTH_MAJORS,
     imageExt: 'webp',
     back: 'back.webp',
-    seedVersion: 1
+    // 2: seeded card meanings + keywords.
+    seedVersion: 2
   },
   {
     id: 'rws',
@@ -163,7 +190,8 @@ const SPECS: DeckSpec[] = [
     majors: RWS_MAJORS,
     imageExt: 'jpg',
     back: 'back.png',
-    seedVersion: 2
+    // 3: seeded card meanings + keywords.
+    seedVersion: 3
   },
   {
     id: 'empyrean',
@@ -178,38 +206,101 @@ const SPECS: DeckSpec[] = [
     majors: EMPYREAN_MAJORS,
     imageExt: 'webp',
     back: 'back.webp',
-    seedVersion: 2
+    // 3: seeded card meanings + keywords.
+    seedVersion: 3
   },
   {
     id: 'hybrasyl',
     name: 'Hybrasyl',
-    description: 'Custom Hybrasyl deck — define your own major arcana and suits.',
-    suits: [],
-    pipRanks: PIPS,
-    courtRanks: ['Knight', 'Queen', 'Prince', 'Princess'],
-    supportsReversed: true,
-    majors: []
+    description:
+      'The Temuairan pantheon as the Octagram: four pantheons of eight, each running the ' +
+      'same compass, plus the three primordials who stand outside it. 35 majors over four ' +
+      'suits of eight, with mentors, guides, speakers and dreamers for courts.',
+    suits: ['Swords', 'Staves', 'Coins', 'Cups'],
+    // A short suit: eight pips rather than ten.
+    pipRanks: ['Ace', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight'],
+    courtRanks: ['Mentor', 'Guide', 'Speaker', 'Dreamer'],
+    // Like the Argent and the Empyrean, this deck is read upright only.
+    supportsReversed: false,
+    // The order is the Octagram, not a list: four pantheons of eight, each in the
+    // same compass order — N/Fire, NW/Life, W/Earth, SW/Arcane, S/Water,
+    // SE/Metal, E/Wind, NE/Void — then the three primordials. So maj-0, maj-8,
+    // maj-16 and maj-24 are all North: the same fire expressed, in truth,
+    // inverted, and corrupted. Reordering this breaks that reading (and the
+    // meanings in seedMeanings/hybrasyl.ts, which name each card's direction).
+    majors: [
+      // Tuathair — Expression
+      'Deoch',
+      'Glioca',
+      'Cail',
+      'Luathas',
+      'Gramail',
+      'Fiosachd',
+      'Ceannlaidir',
+      'Sgrios',
+      // Aosdair — Truth
+      'Grannos',
+      'Saothra',
+      'Céithe',
+      'Eolathe',
+      'Marcan',
+      'Lir',
+      'Leothne',
+      'Cairde',
+      // Cráidhros — Inversion
+      'Oraithe Ridire',
+      'Neamhghlan',
+      'Codlaim',
+      'Dubh-Gabhar',
+      'Duibheagan',
+      'Fhala',
+      'Adhnann',
+      'Cin-Mhare',
+      // Gháelros — Corruption
+      'Diorradh',
+      'Bhàrnadh',
+      'Bodhrag',
+      'Cnortha',
+      'Duairce',
+      'Anaman',
+      'Cairrthir',
+      'Basnuall',
+      // Athríd — the primordial trinity, outside the seal
+      'Chadul',
+      'Danaan',
+      'Grinneal'
+    ],
+    // 2: the structure, over the older empty copy. 3: card meanings.
+    // Art is still in progress: leave imageExt/back unset until it lands, or
+    // every card would claim an image file that doesn't exist.
+    seedVersion: 3
   }
 ]
 
-/** Build the built-in decks. `now` is an ISO timestamp stamped on each deck. */
+/**
+ * Build the built-in decks. `now` is an ISO timestamp stamped on each deck.
+ * Card text is looked up per deck from SEED_MEANINGS.
+ */
 export function buildSeedDecks(now: string): Deck[] {
-  return SPECS.map((spec) => ({
-    id: spec.id,
-    name: spec.name,
-    description: spec.description,
-    builtIn: true,
-    suits: spec.suits,
-    pipRanks: spec.pipRanks,
-    courtRanks: spec.courtRanks,
-    supportsReversed: spec.supportsReversed,
-    back: spec.back,
-    seedVersion: spec.seedVersion ?? 1,
-    cards: [
-      ...buildMajors(spec.majors, spec.imageExt),
-      ...buildMinors(spec.suits, spec.pipRanks, spec.courtRanks, spec.imageExt)
-    ],
-    createdAt: now,
-    updatedAt: now
-  }))
+  return SPECS.map((spec) => {
+    const meanings = SEED_MEANINGS[spec.id]
+    return {
+      id: spec.id,
+      name: spec.name,
+      description: spec.description,
+      builtIn: true,
+      suits: spec.suits,
+      pipRanks: spec.pipRanks,
+      courtRanks: spec.courtRanks,
+      supportsReversed: spec.supportsReversed,
+      back: spec.back,
+      seedVersion: spec.seedVersion ?? 1,
+      cards: [
+        ...buildMajors(spec.majors, spec.imageExt, meanings),
+        ...buildMinors(spec.suits, spec.pipRanks, spec.courtRanks, spec.imageExt, meanings)
+      ],
+      createdAt: now,
+      updatedAt: now
+    }
+  })
 }

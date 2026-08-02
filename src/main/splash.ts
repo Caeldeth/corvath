@@ -1,5 +1,6 @@
 import { BrowserWindow } from 'electron'
 import { join } from 'path'
+import { hardenWindow } from './windowSecurity'
 
 /**
  * Frameless, transparent splash window shown the instant the app boots — before
@@ -28,9 +29,14 @@ export function createSplashWindow(): BrowserWindow {
     // The splash has no IPC needs; keep it isolated with no preload.
     webPreferences: {
       contextIsolation: true,
-      nodeIntegration: false
+      nodeIntegration: false,
+      sandbox: true
     }
   })
+
+  // The splash opens nothing and navigates nowhere. It is never registered as a
+  // trusted IPC sender — with no preload it has no bridge to send over anyway.
+  hardenWindow(splash, { allowExternal: false, openExternal: () => {} })
 
   // resources/ is bundled with the app (and packed into the asar, from which
   // loadFile reads transparently), so this resolves in production too.

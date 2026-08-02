@@ -72,7 +72,9 @@
   <body>
     <div class="card">
       <!-- Loaded from resources/ alongside this file, so it resolves under file:// too. -->
-      <img class="glyph" src="corvath.png" alt="" />
+      <!-- 256px WebP, not the 1254px master: this decode is on the splash's FIRST
+           PAINT, the one thing this window exists to make fast. Drawn at 84px. -->
+      <img class="glyph" src="corvath-splash.webp" alt="" />
       <div class="title">CORVATH</div>
       <div class="subtitle">Tarot</div>
       <div class="spinner"></div>

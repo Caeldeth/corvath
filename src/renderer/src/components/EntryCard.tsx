@@ -13,7 +13,7 @@ import {
 } from '@mui/material'
 import { useState } from 'react'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
-import type { Deck, Entry, Orientation } from '../../../shared/types'
+import type { Deck, Entry, LayoutPosition, Orientation } from '../../../shared/types'
 import DrawCard from './DrawCard'
 import CardPreview from './CardPreview'
 
@@ -22,11 +22,23 @@ interface EntryCardProps {
   index: number
   /** The reading's deck, resolved from the deck builder (null if no match). */
   deck: Deck | null
+  /**
+   * The layout position this entry fills, when the reading has a spread. Names
+   * the slot in the header so the card list reads like the board.
+   */
+  position?: LayoutPosition | null
   onChange: (patch: Partial<Entry>) => void
   onDelete: () => void
 }
 
-export default function EntryCard({ entry, index, deck, onChange, onDelete }: EntryCardProps) {
+export default function EntryCard({
+  entry,
+  index,
+  deck,
+  position,
+  onChange,
+  onDelete
+}: EntryCardProps) {
   const [previewOpen, setPreviewOpen] = useState(false)
   const cardNames = deck ? deck.cards.map((c) => c.name) : []
   const deckCard = deck?.cards.find((c) => c.name === entry.card) ?? null
@@ -51,10 +63,21 @@ export default function EntryCard({ entry, index, deck, onChange, onDelete }: En
   return (
     <Card variant="outlined">
       <CardContent>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
-          <Typography variant="overline" sx={{ flexGrow: 1, opacity: 0.8 }}>
-            Card {index + 1}
-          </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 1.5 }}>
+          {/* Name the slot, so the card list reads like the board above it. The
+              position's meaning goes on its own line rather than into the
+              overline, which is uppercased and letterspaced — a sentence set
+              that way is unreadable. */}
+          <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+            <Typography variant="overline" sx={{ opacity: 0.8, display: 'block', lineHeight: 1.4 }}>
+              {position?.name ? `Card ${index + 1} · ${position.name}` : `Card ${index + 1}`}
+            </Typography>
+            {position?.meaning && (
+              <Typography variant="caption" sx={{ opacity: 0.6, display: 'block' }}>
+                {position.meaning}
+              </Typography>
+            )}
+          </Box>
           <Tooltip title="Remove card">
             <IconButton size="small" onClick={onDelete} aria-label="remove card">
               <DeleteOutlineIcon fontSize="small" />

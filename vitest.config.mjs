@@ -8,6 +8,10 @@ export default defineConfig({
       '@shared': resolve('src/shared')
     }
   },
+  // Match the app build (@vitejs/plugin-react), which uses the automatic JSX
+  // runtime — component files render JSX without importing React, and their
+  // tests should not have to either.
+  esbuild: { jsx: 'automatic' },
   test: {
     // Required for @testing-library/react's automatic per-test cleanup, which
     // registers itself on a global afterEach.
@@ -16,7 +20,18 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'html', 'json-summary'],
       include: ['src/**/*.{ts,tsx}'],
-      exclude: ['**/*.d.ts', '**/__tests__/**', 'src/preload/**', '**/*.config.*']
+      exclude: ['**/*.d.ts', '**/__tests__/**', 'src/preload/**', '**/*.config.*'],
+      // Global floors — ratcheted to just under current coverage so the suite
+      // guards against regression rather than setting an aspiration. The bulk
+      // of the untested surface is the UI layer (components/pages), which is
+      // covered by the Playwright specs in e2e/ instead. Raise these as the
+      // zustand stores pick up unit tests.
+      thresholds: {
+        statements: 28,
+        branches: 21,
+        functions: 18,
+        lines: 30
+      }
     },
     projects: [
       {
@@ -27,7 +42,8 @@ export default defineConfig({
           include: [
             'src/main/**/__tests__/**/*.test.ts',
             'src/shared/**/__tests__/**/*.test.ts',
-            'src/renderer/src/lib/__tests__/**/*.test.ts'
+            'src/renderer/src/lib/__tests__/**/*.test.ts',
+            'scripts/**/*.test.mjs'
           ]
         }
       },
