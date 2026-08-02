@@ -59,3 +59,32 @@ and stays local.
   title bar.
 - **Update notification** — checks for a newer release on launch and offers a
   link. Nothing is downloaded or installed for you.
+- **macOS and Linux builds** — alongside the Windows portable exe, releases now
+  carry a macOS `.dmg` (universal, Apple Silicon and Intel) and Linux AppImage
+  and `.deb` packages. These are **not yet signed or notarized**, so macOS
+  Gatekeeper and Windows SmartScreen will warn on first run.
+- **Branded startup on the portable build** — the portable exe unpacks itself
+  before the app exists, which used to be several seconds of nothing. It now
+  shows the Corvath splash for that whole stretch, so startup reads as one
+  continuous boot.
+
+### Changed
+
+- **Smaller download and a faster splash.** The app no longer ships its UI
+  libraries twice or decodes a 2.3 MB image to draw a 84-pixel logo. The
+  packaged archive dropped from roughly 38,700 files to about 950, and the
+  images inside it from 4.7 MB to 266 KB.
+
+### Security
+
+- **The window can no longer be navigated away from Corvath's own pages**, and
+  links now reach your browser only when they are ordinary web or mail links.
+  Anything else — a local file path, a network share, a script URL, or a custom
+  scheme registered by some other program on your machine — is refused rather
+  than handed to the operating system.
+- **The interface runs sandboxed**, and every request it makes to the app's
+  privileged side is checked to confirm it came from a real Corvath window
+  showing Corvath's own content.
+- **The shipped Electron runtime's debugging escape hatches are switched off**,
+  so the bundled binary cannot be repurposed to run arbitrary code through
+  environment variables or command-line flags.
