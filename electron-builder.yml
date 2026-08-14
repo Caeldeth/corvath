@@ -28,9 +28,17 @@ asarUnpack:
   - bundled/**
 win:
   executableName: corvath
-  # 1.0 ships a single portable exe. The nsis block below is kept ready to be
-  # added back to this list.
+  # BOTH, and the release workflow names neither. `release.yml` packages with a
+  # bare `--win`, so this list is the only statement of what Windows ships.
+  # A target list in two places is a target list that disagrees with itself:
+  # taliesin declared nsis here since WP14 while its workflow packaged
+  # `--win portable`, so it shipped no installer for eight releases and every
+  # gate passed (HTOO-369). scripts/release-artifacts.test.mjs pins this list
+  # against the release job's globs in both directions.
   target:
+    - target: nsis
+      arch:
+        - x64
     - target: portable
       arch:
         - x64
@@ -44,10 +52,28 @@ portable:
   # Regenerate with: node scripts/make-portable-splash.mjs
   splashImage: build/portable-splash.bmp
 nsis:
+  # Predictable name for the release workflow's sign + upload steps. The default
+  # is "Corvath Tarot Setup <version>.exe", with spaces, which every path in that
+  # workflow would then have to quote.
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
+  # Assisted rather than one-click, and per-user rather than per-machine. The
+  # three settle together, and match taliesin, creidhne and epona:
+  #   * oneClick: false gives a wizard rather than an install that starts on
+  #     double-click.
+  #   * perMachine: false installs under the user profile, so there is no UAC
+  #     prompt and no administrator requirement. It also agrees with where the
+  #     app already keeps its data: %LOCALAPPDATA%\Erisco\Corvath.
+  #   * allowToChangeInstallationDirectory only has an effect while oneClick is
+  #     false; NSIS has no directory page to offer in a one-click install.
+  # perMachine is the expensive one to revisit: a per-machine installer does NOT
+  # upgrade an existing per-user installation, and the user ends with two. It is
+  # safe to settle now only because corvath has never shipped an installer.
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
 
 # mac/linux are scaffolded ahead of signing. The CI jobs build them on every
 # release; the mac job signs and notarizes only when Apple credentials exist, so
@@ -74,9 +100,44 @@ mac:
 dmg:
   artifactName: ${name}-${version}.${ext}
 linux:
-  # The square master is right here — Linux desktop environments draw the icon
-  # as-is with no platform mask.
-  icon: build/icon.png
+  # MUST be explicit, and must be a DIRECTORY.
+  #
+  # electron-builder resolves the Linux icon as [linux.icon, mac.icon ?? icon]
+  # (app-builder-lib LinuxTargetHelper.js), so mac.icon OUTRANKS the top-level
+  # icon above. This key was already explicit and the row was STILL a defect --
+  # corvath was the one repo in R-008's sweep where that was true, because the
+  # invariant is the SET, not the key.
+  #
+  # A single PNG is never resampled (iconConverter.js): one PNG in, one hicolor
+  # entry out, at its own size. hicolor's index.theme stops at 512, so the old
+  # `build/icon.png` produced one 1254x1254 entry that no desktop environment
+  # indexes -- the generic blank document icon.
+  #
+  # WHICH ARTWORK. build/icon.png is the WINDOWS art (raven + heptagram). The
+  # macOS/Linux art is the document repo's Corvath_fixed.png (line-art card +
+  # quill) -- a different picture, not a variant, measured at 19.5% RMSE.
+  # build/icon-mac.png is that same master with Apple's squircle and 824/1024
+  # inset ADDED, so Linux takes a straight resize and crops nothing. Generating
+  # from build/icon.png would ship a plausible, verifiable, WRONG icon.
+  #
+  # Regenerate with:  node scripts/make-linux-icons.mjs
+  icon: build/icons
+  # A correct hicolor set is only half of it, and this is the half that gets
+  # missed: oghma shipped the right sizes and still drew a generic taskbar icon.
+  # Electron derives its app_id / WM_CLASS from package.json's `desktopName`
+  # (corvath.desktop -> "corvath"), while electron-builder writes StartupWMClass
+  # from productName ("Corvath Tarot") when this is unset. That mismatch stops a
+  # desktop environment linking the running window to the installed entry,
+  # however correct build/icons/ is.
+  #
+  # `desktopName` itself lives in package.json, NOT here: there is no
+  # linux.desktopName key in the schema, and putting it here does not get
+  # ignored -- it rejects the ENTIRE linux block with "configuration.linux
+  # should be one of these: null", a message that never names the offending key.
+  # Mabon shipped that for one commit; `npm run build` is electron-vite and
+  # never reads this file, so every gate stayed green on a config that could not
+  # package at all.
+  syncDesktopName: true
   category: Utility
   synopsis: Tarot reading recorder
   target:

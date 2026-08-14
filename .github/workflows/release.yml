@@ -76,7 +76,13 @@ jobs:
       - name: Build app
         run: npm run build
 
-      - name: Package portable exe
+      # No target list here, so the Windows targets live in electron-builder.yml
+      # and nowhere else. A target list in two places is a target list that
+      # disagrees with itself, and the config is the half a reader checks --
+      # taliesin named `--win portable` against a config declaring nsis too, and
+      # shipped no installer for eight releases with every gate green (HTOO-369).
+      # scripts/release-artifacts.test.mjs enforces the absence of a list here.
+      - name: Package installer + portable exe
         run: npx electron-builder --win --publish never
 
       - name: Resolve artifact name + version
@@ -113,11 +119,44 @@ jobs:
           file_path: ${{ github.workspace }}/dist/${{ steps.pkg.outputs.name }}-${{ steps.pkg.outputs.version }}-portable.exe
           override: true
 
-      - name: Upload Windows artifact
+      # A SECOND step rather than a loop, because the action signs one file and
+      # takes its path as an input.
+      #
+      # It shares the `steps.signing` condition with the portable step above, so
+      # the two sign together or not at all. Signing one of the pair would be
+      # worse than signing neither: a user handed a signed installer beside an
+      # unsigned portable exe cannot read that as "credentials are configured for
+      # one artifact" rather than "this download is not the real one".
+      #
+      # This signs the installer itself. electron-builder already signed the app
+      # exe and the uninstaller during packaging, which is the part that cannot
+      # be done afterwards -- both are inside this file by now.
+      - name: Sign installer (SSL.com eSigner)
+        if: steps.signing.outputs.enabled == 'true'
+        uses: sslcom/esigner-codesign@cf5f6c1d38ad10f47e3ed9aca873f429b1a8d85b # v1.3.2
+        with:
+          command: sign
+          username: ${{ secrets.ES_USERNAME }}
+          password: ${{ secrets.ES_PASSWORD }}
+          credential_id: ${{ secrets.ES_CREDENTIAL_ID }}
+          totp_secret: ${{ secrets.ES_TOTP_SECRET }}
+          file_path: ${{ github.workspace }}/dist/${{ steps.pkg.outputs.name }}-${{ steps.pkg.outputs.version }}-setup.exe
+          override: true
+
+      - name: Upload Windows artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: windows-portable
-          path: dist/*-portable.exe
+          name: windows
+          # Both, and `if-no-files-found: error` now covers both -- the setup exe
+          # is named by `nsis.artifactName` in electron-builder.yml, so a rename
+          # there fails this step rather than silently shipping one artifact.
+          # The `.blockmap` electron-builder writes beside the installer is NOT
+          # collected: it exists for electron-updater's differential download,
+          # and corvath has no updater (updateCheck.ts notifies and downloads
+          # nothing).
+          path: |
+            dist/*-setup.exe
+            dist/*-portable.exe
           if-no-files-found: error
           # 1 day, not the 90-day default. These exist only to hand packages to
           # the `release` job minutes later; the published Release keeps its own
@@ -232,6 +271,7 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           files: |
+            artifacts/**/*-setup.exe
             artifacts/**/*-portable.exe
             artifacts/**/*.dmg
             artifacts/**/*.AppImage

@@ -15,76 +15,94 @@ Release process (the notes are authored HERE, not edited on GitHub after the fac
      to pull THIS version's section into the GitHub release body, then appends the
      auto-generated PR list below it.
 Keep entries user-facing — internal refactors/tests show up in the appended auto list.
+
+Write entries in ASD-STE100 Simplified Technical English (asd-ste100.org), like the rest of the
+documentation in this repo:
+  - One idea per sentence. Keep sentences below about 25 words.
+  - Present tense, active voice. Name the actor: "Corvath records the seed", not "the seed
+    is recorded".
+  - One term for one thing, through the whole file. Do not reach for a synonym for variety.
+  - No idioms, no metaphor, no rhetorical asides. Give the fault, then the behaviour now.
+Keep the section order of Keep a Changelog: Added, Changed, Deprecated, Removed, Fixed, Security.
+One heading of each kind per version.
 -->
 
 ## [Unreleased]
 
-First shipped release — a desktop tarot companion that draws readings, records
-them, and lets you build the decks and spreads it draws from. All data is yours
-and stays local.
+This is the first release. Corvath is a desktop tarot companion. It draws
+readings, records them, and builds the decks and spreads it draws from. Corvath
+keeps all of your data on your own machine.
 
 ### Added
 
-- **Draw** — draw a reading in-app against any deck, either onto a saved spread
-  or as a free run of N cards. Two modes: **deal from top**, which flips slot by
-  slot and honours per-position top/bottom draw sources, and **fan & pick**,
-  which fans the shuffled deck face-down for you to choose from. Every draw is
-  seeded, so a recorded reading is reproducible.
-- **Readings** — a journal of readings, each with a title, date, deck, optional
-  spread, and free-form notes. Every card entry carries its own topic, question,
-  orientation, the deck's meaning, and your interpretation. Readings drawn in-app
-  are marked as such.
-- **Decks** — a structure-agnostic deck builder: arbitrary majors, suits, pip
-  ranks, and court ranks, with per-card meanings, keywords, and imported art plus
-  a card back. Four decks ship built in — **Rider-Waite-Smith**, the **Argent
-  Tarot** (original art on the Thoth structure), the **Empyrean** (original art,
-  custom court ranks), and **Hybrasyl** (the Temuairan pantheon: 35 majors over
-  four short suits).
-- **Card meanings** — every built-in deck ships a meaning and keywords for each
-  card, written in that deck's own register rather than one set of text reused
-  across all four. Rider-Waite-Smith also carries reversed meanings. They are
-  yours to edit.
-- **Layouts** — a visual spread builder: drag positions on a board, name each
-  slot, mark crossing cards, and set which end of the deck a slot draws from.
-  Single Card, Three Card, Celtic Cross, and Horseshoe ship seeded. A recorded
-  reading shows its spread with the drawn cards' art in place, and each card in
-  the list below names the slot it fills.
-- **Card preview** — click any face-up card to see it large, with its keywords,
-  orientation, and the deck's meaning.
-- **Import & export** — readings import and export as round-trippable JSON;
-  decks export and import as portable `.corvathdeck` files (art included), so a
-  deck you build can be shared.
-- **Six themes** — four dark fantasy (Hybrasyl, Chadul, Danaan, Grinneal) plus
-  the Mundanes (light) and Dubhaimid (dark) corporate pair; frameless custom
-  title bar.
-- **Update notification** — checks for a newer release on launch and offers a
-  link. Nothing is downloaded or installed for you.
-- **macOS and Linux builds** — alongside the Windows portable exe, releases now
-  carry a macOS `.dmg` (universal, Apple Silicon and Intel) and Linux AppImage
-  and `.deb` packages. These are **not yet signed or notarized**, so macOS
-  Gatekeeper and Windows SmartScreen will warn on first run.
+- **Draw** — draw a reading against any deck. Use a saved spread, or draw a free
+  run of N cards. Corvath gives you two modes. **Deal from top** turns over one
+  slot at a time, and obeys the draw source that each position sets. **Fan and
+  pick** fans the shuffled deck face-down, and you choose each card. Corvath
+  seeds every draw, so it can reproduce a recorded reading.
+- **Readings** — a journal of your readings. Each reading holds a title, a date,
+  a deck, an optional spread, and free-form notes. Each card entry holds its own
+  topic, question, orientation, deck meaning, and your interpretation. Corvath
+  marks the readings that it drew for you.
+- **Decks** — a deck builder that assumes no structure. Set the majors, the
+  suits, the pip ranks, and the court ranks. Give each card a meaning, keywords,
+  imported art, and a card back. Corvath ships four decks: **Rider-Waite-Smith**,
+  the **Argent Tarot** (original art on the Thoth structure), the **Empyrean**
+  (original art, custom court ranks), and **Hybrasyl** (the Temuairan pantheon,
+  35 majors over four short suits).
+- **Card meanings** — each built-in deck ships a meaning and keywords for every
+  card. Corvath writes the text in the register of that deck. It does not reuse
+  one set of text across the four decks. Rider-Waite-Smith also holds reversed
+  meanings. You can edit all of this text.
+- **Layouts** — a visual builder for spreads. Drag the positions on a board, name
+  each slot, mark the crossing cards, and set the end of the deck that each slot
+  draws from. Corvath ships four spreads: Single Card, Three Card, Celtic Cross,
+  and Horseshoe. A recorded reading shows its spread with the art of the drawn
+  cards in place. Each card in the list below the board names the slot that it
+  fills.
+- **Card preview** — click a face-up card to see it large. The preview shows the
+  keywords, the orientation, and the deck meaning.
+- **Import and export** — Corvath imports and exports readings as JSON, and the
+  export round-trips. It exports and imports a deck as a portable `.corvathdeck`
+  file, which includes the art. You can therefore share a deck that you build.
+- **Six themes** — four are dark fantasy: Hybrasyl, Chadul, Danaan, and
+  Grinneal. Two are a corporate pair: Mundanes (light) and Dubhaimid (dark).
+  Corvath draws its own title bar, which has no window frame.
+- **Update notification** — Corvath looks for a newer release at launch, and
+  offers you a link to it. It downloads nothing and installs nothing.
+- **An installer for Windows** — a release now carries
+  `corvath-<version>-setup.exe` beside the portable exe. The installer asks you
+  where to put Corvath. It adds a Start menu entry and a desktop shortcut, and it
+  lists Corvath in Installed apps. It installs for the current user only, so it
+  needs no administrator rights. Run it again to upgrade in place. Both downloads
+  read the same settings, so you can move from one to the other. An uninstall
+  leaves your readings, decks and layouts on the machine.
+- **macOS and Linux builds** — a release now carries a macOS `.dmg` beside the
+  Windows portable exe. The `.dmg` is universal, for Apple Silicon and Intel. A
+  release also carries a Linux AppImage and a `.deb` package. Corvath does not
+  sign or notarize these builds yet. macOS Gatekeeper and Windows SmartScreen
+  therefore warn you at the first run.
 - **Branded startup on the portable build** — the portable exe unpacks itself
-  before the app exists, which used to be several seconds of nothing. It now
-  shows the Corvath splash for that whole stretch, so startup reads as one
-  continuous boot.
+  before the app starts. This step took several seconds and showed you nothing.
+  Corvath now shows its splash screen for that time. Startup is therefore one
+  continuous sequence.
 
 ### Changed
 
-- **Smaller download and a faster splash.** The app no longer ships its UI
-  libraries twice or decodes a 2.3 MB image to draw a 84-pixel logo. The
-  packaged archive dropped from roughly 38,700 files to about 950, and the
-  images inside it from 4.7 MB to 266 KB.
+- **A smaller download and a faster splash screen.** Corvath no longer ships its
+  interface libraries two times. It also no longer decodes a 2.3 MB image to draw
+  an 84-pixel logo. The packaged archive now holds about 950 files, down from
+  about 38,700. The images in it total 266 KB, down from 4.7 MB.
 
 ### Security
 
-- **The window can no longer be navigated away from Corvath's own pages**, and
-  links now reach your browser only when they are ordinary web or mail links.
-  Anything else — a local file path, a network share, a script URL, or a custom
-  scheme registered by some other program on your machine — is refused rather
-  than handed to the operating system.
-- **The interface runs sandboxed**, and every request it makes to the app's
-  privileged side is checked to confirm it came from a real Corvath window
-  showing Corvath's own content.
-- **The shipped Electron runtime's debugging escape hatches are switched off**,
-  so the bundled binary cannot be repurposed to run arbitrary code through
+- **Corvath refuses to move its window away from its own pages.** It opens a link
+  in your browser only when the link is an ordinary web or mail link. It refuses
+  every other kind of link: a local file path, a network share, a script URL, or
+  a custom scheme that another program on your machine registers.
+- **The interface runs in a sandbox.** Corvath checks every request that the
+  interface makes to its privileged side. The check confirms that the request
+  comes from a real Corvath window that shows the content of Corvath.
+- **Corvath switches off the debug controls in the Electron runtime that it
+  ships.** Nobody can therefore use the bundled binary to run other code through
   environment variables or command-line flags.
