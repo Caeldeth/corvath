@@ -3,7 +3,14 @@ import { join, resolve, sep } from 'path'
 import { tmpdir } from 'os'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { Deck } from '../../shared/types'
-import { createStores, mergeSeedDeck, resolveWithin, safeSegment } from '../store'
+import {
+  backfillSeedFingerprints,
+  createStores,
+  mergeSeedDeck,
+  resolveWithin,
+  safeSegment,
+  stampSeedDeck
+} from '../store'
 import { buildSeedDecks } from '../seedDecks'
 
 let dir: string
@@ -138,7 +145,17 @@ describe('ensureDecksSeeded', () => {
     await s.ensureDecksSeeded(now)
     const rws = (await s.loadDecks()).find((d) => d.id === 'rws')!
     expect(rws.seedVersion).toBe(currentSeed('rws').seedVersion)
-    expect(rws.name).toBe('Rider-Waite-Smith')
+    // Structure is the seed's outright.
+    expect(rws.cards).toHaveLength(currentSeed('rws').cards.length)
+    expect(rws.suits).toEqual(currentSeed('rws').suits)
+
+    // The NAME is not, and this assertion was flipped by HTOO-231. This fixture
+    // carries no provenance stamps, so nothing distinguishes "a name we shipped
+    // in an older build" from "a name the user typed" — and the merge resolves
+    // that ambiguity in the user's favour deliberately. The cost of being wrong
+    // here is a stale deck title the user can fix in one edit; the cost of the
+    // other default was destroying text with no way to get it back.
+    expect(rws.name).toBe('Old RWS')
   })
 
   it('upgrades a built-in stored without a seedVersion at all', async () => {
@@ -177,14 +194,17 @@ describe('ensureDecksSeeded', () => {
     expect((await s.loadDecks()).find((d) => d.id === 'argent')!.name).toBe('My Argent')
   })
 
-  it('delivers seeded card text over the stored copy on a bump', async () => {
+  // INVERTED. This test previously asserted the defect as intended behaviour:
+  // "a non-empty seed value wins", so a bump replaced a user's own note. Now
+  // that all four decks ship full text, that rule silently destroys anything a
+  // user writes over a built-in card. HTOO-231.
+  it('keeps a user edit through a bump, and still delivers text they never touched', async () => {
     const s = stores()
     await s.ensureDecksSeeded(now)
     const decks = await s.loadDecks()
-    // Take the current rws, overwrite a major's text, and roll the stored
-    // seedVersion back so the next seed pass counts as an upgrade.
     const rws = decks.find((d) => d.id === 'rws')!
     const foolId = rws.cards[0].id
+    const untouchedId = rws.cards[1].id
     const edited: Deck = {
       ...rws,
       seedVersion: 1,
@@ -198,13 +218,29 @@ describe('ensureDecksSeeded', () => {
     const merged = (await s.loadDecks()).find((d) => d.id === 'rws')!
     expect(merged.seedVersion).toBe(currentSeed('rws').seedVersion)
 
-    // preferSeedString: a non-empty seed value wins. Now that rws ships text,
-    // an upgrade replaces a user's edit on a built-in card rather than keeping
-    // it — the fallback-to-user path only fires where the seed stays silent,
-    // which the pure mergeSeedDeck tests below cover directly.
+    // The user's text survives, and stays unstamped so it survives the NEXT
+    // bump too.
     const fool = merged.cards.find((c) => c.id === foolId)!
-    expect(fool.meaning).toBe(currentSeed('rws').cards[0].meaning)
-    expect(fool.meaning).not.toBe('my note')
+    expect(fool.meaning).toBe('my note')
+    expect(fool.keywords).toEqual(['mine'])
+    expect(fool.seedFingerprints?.meaning).toBeUndefined()
+
+    // A card they never edited still receives the seed's current text — this is
+    // the half a naive "only fill empty fields" fix would break forever.
+    const untouched = merged.cards.find((c) => c.id === untouchedId)!
+    const shipped = currentSeed('rws').cards.find((c) => c.id === untouchedId)!
+    expect(untouched.meaning).toBe(shipped.meaning)
+  })
+
+  it('does not rewrite decks.json once provenance has been backfilled', async () => {
+    // backfillSeedFingerprints runs on every boot; it must return the same
+    // reference when there is nothing to do, or the store writes forever.
+    const s = stores()
+    await s.ensureDecksSeeded(now)
+    await s.ensureDecksSeeded(now)
+    const before = await fs.readFile(join(dir, 'decks.json'), 'utf8')
+    await s.ensureDecksSeeded(now)
+    expect(await fs.readFile(join(dir, 'decks.json'), 'utf8')).toBe(before)
   })
 })
 
@@ -222,15 +258,97 @@ describe('mergeSeedDeck', () => {
     ...over
   })
 
-  it('prefers the seed field when the seed provides one', () => {
+  // INVERTED, same reason as the bump test above: an UNSTAMPED value is the
+  // user's, because nothing proves we wrote it. Absence of provenance is
+  // treated as authorship — the safe direction.
+  it('keeps an unstamped user value, because nothing proves the seed wrote it', () => {
     const user = base({ cards: [{ id: 'maj-0', section: 'major', name: 'Fool', meaning: 'user' }] })
     const seed = base({
       name: 'D2',
       cards: [{ id: 'maj-0', section: 'major', name: 'Fool', meaning: 'seed' }]
     })
     const out = mergeSeedDeck(user, seed)
+    expect(out.name).toBe('D')
+    expect(out.cards[0].meaning).toBe('user')
+  })
+
+  it('takes the seed value when the stored one still matches its stamp', () => {
+    const seeded = stampSeedDeck(
+      base({ name: 'D', cards: [{ id: 'maj-0', section: 'major', name: 'Fool', meaning: 'v1' }] })
+    )
+    const seed = base({
+      name: 'D2',
+      cards: [{ id: 'maj-0', section: 'major', name: 'Fool', meaning: 'v2' }]
+    })
+    const out = mergeSeedDeck(seeded, seed)
     expect(out.name).toBe('D2')
-    expect(out.cards[0].meaning).toBe('seed')
+    expect(out.cards[0].meaning).toBe('v2')
+    // Re-stamped against the new value, so the bump after this one still works.
+    expect(out.cards[0].seedFingerprints?.meaning).toBeDefined()
+  })
+
+  it('preserves imported art, a card back, and cards the user added', () => {
+    const user = base({
+      back: 'my-back.png',
+      backVersion: 3,
+      cards: [
+        {
+          id: 'maj-0',
+          section: 'major',
+          name: 'Fool',
+          image: 'fool.png',
+          imageVersion: 2
+        },
+        { id: 'mine-1', section: 'major', name: 'A card I added' }
+      ]
+    })
+    const seed = base({
+      back: 'seed-back.png',
+      cards: [{ id: 'maj-0', section: 'major', name: 'Fool', meaning: 'seed' }]
+    })
+    const out = mergeSeedDeck(user, seed)
+
+    // All four losses the old `{ ...seed, cards }` caused, in one assertion set.
+    expect(out.cards[0].image).toBe('fool.png')
+    expect(out.cards[0].imageVersion).toBe(2)
+    expect(out.back).toBe('my-back.png')
+    expect(out.backVersion).toBe(3)
+    expect(out.cards.find((c) => c.id === 'mine-1')).toBeDefined()
+  })
+
+  it('lets the seed own pure structure outright', () => {
+    const user = base({ suits: ['Old'], pipRanks: ['A'], supportsReversed: false })
+    const seed = base({
+      suits: ['Wands', 'Cups'],
+      pipRanks: ['Ace', 'Two'],
+      supportsReversed: true
+    })
+    const out = mergeSeedDeck(user, seed)
+    expect(out.suits).toEqual(['Wands', 'Cups'])
+    expect(out.pipRanks).toEqual(['Ace', 'Two'])
+    expect(out.supportsReversed).toBe(true)
+  })
+
+  it('backfills a stamp only where the stored value still equals the seed', () => {
+    const shipped = base({
+      cards: [
+        { id: 'maj-0', section: 'major', name: 'Fool', meaning: 'shipped' },
+        { id: 'maj-1', section: 'major', name: 'Magician', meaning: 'shipped' }
+      ]
+    })
+    const stored = base({
+      cards: [
+        { id: 'maj-0', section: 'major', name: 'Fool', meaning: 'shipped' },
+        { id: 'maj-1', section: 'major', name: 'Magician', meaning: 'I rewrote this' }
+      ]
+    })
+    const out = backfillSeedFingerprints(stored, shipped)
+    expect(out.cards[0].seedFingerprints?.meaning).toBeDefined()
+    expect(out.cards[1].seedFingerprints?.meaning).toBeUndefined()
+
+    // And the edited card then survives a bump, which is the point of the backfill.
+    const bumped = mergeSeedDeck(out, base({ cards: [{ ...shipped.cards[1], meaning: 'v2' }] }))
+    expect(bumped.cards[0].meaning).toBe('I rewrote this')
   })
 
   it('falls back to the user field when the seed leaves it empty, matched by suit+rank', () => {

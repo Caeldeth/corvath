@@ -89,8 +89,9 @@ function slug(value: string): string {
 
 /**
  * Fold seeded text onto a card. Empty/absent fields are omitted rather than set
- * to '' so the merge on a seedVersion bump keeps deferring to the user's own
- * text for anything the seed doesn't say (see preferSeedString in store.ts).
+ * to '', so the seed makes no claim on a field it does not specify — an empty
+ * string would be stamped as ours and then overwrite the user's text on the
+ * next bump (see `mergeSeedDeck` in store.ts).
  */
 function withMeaning(card: DeckCard, text: CardMeaning | undefined): DeckCard {
   if (!text) return card

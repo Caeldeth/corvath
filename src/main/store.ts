@@ -1,3 +1,4 @@
+import { createHash } from 'crypto'
 import { promises as fs } from 'fs'
 import { join, resolve, sep } from 'path'
 import type { Deck, DeckCard, Layout, Reading, Settings } from '../shared/types'
@@ -55,45 +56,223 @@ export function resolveWithin(root: string, deckId: string, filename: string): s
 
 const minorKey = (suit: string, rank: string): string => `${suit}|${rank}`
 
-/** Prefer a seed's own non-empty string; otherwise fall back to the user's. */
-const preferSeedString = (seedVal?: string, userVal?: string): string | undefined =>
-  seedVal && seedVal.trim() ? seedVal : userVal
+/**
+ * The fields the seed OWNS and may update on a bump. Everything not listed is
+ * the user's outright and is copied across untouched.
+ *
+ * `image` / `imageVersion` are deliberately absent: they are written only by a
+ * user import and never by a seed, so they need no provenance to be safe.
+ */
+const SEEDED_CARD_FIELDS = ['name', 'meaning', 'meaningReversed', 'keywords'] as const
+const SEEDED_DECK_FIELDS = ['name', 'description'] as const
 
-const preferSeedKeywords = (seedKw?: string[], userKw?: string[]): string[] | undefined =>
-  seedKw && seedKw.length ? seedKw : userKw
+type SeededCardField = (typeof SEEDED_CARD_FIELDS)[number]
+type SeededDeckField = (typeof SEEDED_DECK_FIELDS)[number]
 
 /**
- * Merge an updated seed deck over the user's existing copy: take the seed's
- * structure and art, but preserve the user's meaning/meaningReversed/keywords
- * (matched by id for majors, suit+rank for minors) wherever the seed leaves that
- * field empty. This is used on a seedVersion bump so a content update never
- * discards notes the user typed.
+ * A short, stable fingerprint of one field's value.
+ *
+ * A hash rather than a second copy of the text: the four meanings files run to
+ * 400-500 lines each, and storing them twice would double decks.json for a
+ * question answerable in 12 characters.
+ */
+const fingerprint = (value: unknown): string =>
+  createHash('sha256')
+    .update(typeof value === 'string' ? value : JSON.stringify(value ?? null))
+    .digest('base64url')
+    .slice(0, 12)
+
+const isEmpty = (v: unknown): boolean =>
+  v === undefined ||
+  v === null ||
+  (typeof v === 'string' && !v.trim()) ||
+  (Array.isArray(v) && !v.length)
+
+/**
+ * Decide one field on a seedVersion bump, and say whether the seed still owns it.
+ *
+ * Three cases, in order:
+ *   1. The user's value is empty  -> take the seed's. Nothing can be lost, and
+ *      this is what lets a seed ADD a field (reversed meanings, say) to an
+ *      install that never had one. A rule of "only fill empty fields" without
+ *      the two cases below is the trap: once every field ships text, no field
+ *      is ever empty again and no correction can ever reach an existing user.
+ *   2. The user's value still matches the fingerprint we stamped  -> we wrote
+ *      it, the user has not touched it, so take the seed's new value.
+ *   3. Anything else -> the user's, including every unstamped field. Absence of
+ *      provenance is treated as the user's work, which is the safe direction:
+ *      the cost of being wrong is a correction that does not arrive, not text
+ *      that is destroyed.
+ */
+function reconcile<T>(
+  userVal: T,
+  seedVal: T,
+  stamp: string | undefined
+): { value: T; fromSeed: boolean } {
+  if (isEmpty(userVal)) return { value: seedVal, fromSeed: true }
+  if (stamp !== undefined && fingerprint(userVal) === stamp) {
+    return { value: seedVal, fromSeed: true }
+  }
+  return { value: userVal, fromSeed: false }
+}
+
+/** Stamp every seeded field of a freshly shipped card/deck. */
+function stampAll<T extends object>(value: T, fields: readonly string[]): T {
+  const stamps: Record<string, string> = {}
+  for (const f of fields) {
+    const v = (value as Record<string, unknown>)[f]
+    if (!isEmpty(v)) stamps[f] = fingerprint(v)
+  }
+  return { ...value, seedFingerprints: stamps }
+}
+
+/** Apply the seed's provenance stamps to a whole deck, for a first install. */
+export const stampSeedDeck = (seed: Deck): Deck => ({
+  ...stampAll(seed, SEEDED_DECK_FIELDS),
+  cards: seed.cards.map((c) => stampAll(c, SEEDED_CARD_FIELDS))
+})
+
+/**
+ * Backfill provenance onto a deck stored before stamps existed.
+ *
+ * A stored value that still equals what the seed ships is PROVABLY unedited, so
+ * it can be stamped and stays eligible for future corrections. Anything that
+ * differs is left unstamped and becomes the user's for good.
+ *
+ * This must run before the first bump after the fix ships, which is why
+ * `ensureDecksSeeded` calls it on every boot rather than behind a version gate.
+ * A user who skips several releases has a stored deck older than `seed`, so more
+ * fields read as "edited" than really were — they keep their text and stop
+ * receiving corrections for those fields. Conservative in the safe direction.
+ */
+export function backfillSeedFingerprints(userDeck: Deck, seed: Deck): Deck {
+  const seedCards = indexSeedCards(seed)
+  // Returns the SAME reference when there is nothing to do. `ensureDecksSeeded`
+  // runs this on every boot and uses identity to decide whether to write, so a
+  // gratuitous copy would rewrite decks.json forever.
+  const backfillOne = <T extends object>(
+    stored: T,
+    shipped: T | undefined,
+    fields: readonly string[]
+  ): T => {
+    if (!shipped || (stored as { seedFingerprints?: unknown }).seedFingerprints) return stored
+    const stamps: Record<string, string> = {}
+    for (const f of fields) {
+      const mine = (stored as Record<string, unknown>)[f]
+      const theirs = (shipped as Record<string, unknown>)[f]
+      if (!isEmpty(mine) && fingerprint(mine) === fingerprint(theirs)) stamps[f] = fingerprint(mine)
+    }
+    return { ...stored, seedFingerprints: stamps }
+  }
+
+  const deck = backfillOne(userDeck, seed, SEEDED_DECK_FIELDS)
+  const cards = userDeck.cards.map((c) =>
+    backfillOne(c, matchSeedCard(seedCards, c), SEEDED_CARD_FIELDS)
+  )
+  const cardsChanged = cards.some((c, i) => c !== userDeck.cards[i])
+  if (deck === userDeck && !cardsChanged) return userDeck
+  return { ...deck, cards }
+}
+
+type SeedIndex = { byId: Map<string, DeckCard>; bySuitRank: Map<string, DeckCard> }
+
+const indexSeedCards = (deck: Deck): SeedIndex => ({
+  byId: new Map(deck.cards.map((c) => [c.id, c])),
+  bySuitRank: new Map(
+    deck.cards
+      .filter((c) => c.section === 'minor' && c.suit && c.rank)
+      .map((c) => [minorKey(c.suit!, c.rank!), c])
+  )
+})
+
+/** Majors match by id; minors by suit+rank, so a renumbered minor still pairs. */
+const matchSeedCard = (index: SeedIndex, card: DeckCard): DeckCard | undefined =>
+  card.section === 'major'
+    ? index.byId.get(card.id)
+    : card.suit && card.rank
+      ? index.bySuitRank.get(minorKey(card.suit, card.rank))
+      : undefined
+
+/**
+ * Merge an updated seed deck over the user's existing copy on a seedVersion bump.
+ *
+ * The seed owns pure STRUCTURE outright — `suits`, `pipRanks`, `courtRanks`,
+ * `supportsReversed` — because those describe the deck's shape rather than
+ * anything a user authors. Everything else is decided per field by `reconcile`,
+ * so a correction reaches the text we wrote and never the text the user wrote.
+ *
+ * This used to be `{ ...seed, cards }` with the card list driven off
+ * `seed.cards`, which discarded four separate kinds of user work in one line:
+ * edited meanings, imported card art and backs, renames, and any card the user
+ * had added to a built-in deck. All four are preserved below.
  */
 export function mergeSeedDeck(userDeck: Deck, seed: Deck): Deck {
-  const byId = new Map(userDeck.cards.map((c) => [c.id, c]))
-  const bySuitRank = new Map(
+  const userById = new Map(userDeck.cards.map((c) => [c.id, c]))
+  const userBySuitRank = new Map(
     userDeck.cards
       .filter((c) => c.section === 'minor' && c.suit && c.rank)
       .map((c) => [minorKey(c.suit!, c.rank!), c])
   )
+  const claimed = new Set<string>()
 
   const cards: DeckCard[] = seed.cards.map((sc) => {
     const prior =
       sc.section === 'major'
-        ? byId.get(sc.id)
+        ? userById.get(sc.id)
         : sc.suit && sc.rank
-          ? bySuitRank.get(minorKey(sc.suit, sc.rank))
+          ? userBySuitRank.get(minorKey(sc.suit, sc.rank))
           : undefined
-    if (!prior) return sc
-    return {
-      ...sc,
-      meaning: preferSeedString(sc.meaning, prior.meaning),
-      meaningReversed: preferSeedString(sc.meaningReversed, prior.meaningReversed),
-      keywords: preferSeedKeywords(sc.keywords, prior.keywords)
+    if (!prior) return stampAll(sc, SEEDED_CARD_FIELDS)
+    claimed.add(prior.id)
+
+    const merged: DeckCard = { ...sc }
+    const stamps: Record<string, string> = {}
+    for (const f of SEEDED_CARD_FIELDS) {
+      const { value, fromSeed } = reconcile(
+        prior[f as SeededCardField],
+        sc[f as SeededCardField],
+        prior.seedFingerprints?.[f]
+      )
+      ;(merged as unknown as Record<string, unknown>)[f] = value
+      // Stamp only what the seed still owns. A field we conceded to the user
+      // must stay UNSTAMPED, or the next bump would read it as ours again.
+      if (fromSeed && !isEmpty(value)) stamps[f] = fingerprint(value)
     }
+    merged.seedFingerprints = stamps
+
+    // Art is the user's whenever they imported any. imageVersion is written
+    // only by an import and never by a seed, so its presence is the signal.
+    if (prior.image !== undefined) merged.image = prior.image
+    if (prior.imageVersion !== undefined) merged.imageVersion = prior.imageVersion
+    return merged
   })
 
-  return { ...seed, cards }
+  // Cards the user added to a built-in deck are not in the seed at all. They
+  // were previously dropped without a trace.
+  for (const c of userDeck.cards) if (!claimed.has(c.id)) cards.push(c)
+
+  const deckStamps: Record<string, string> = {}
+  const deckFields: Partial<Record<SeededDeckField, string | undefined>> = {}
+  for (const f of SEEDED_DECK_FIELDS) {
+    const { value, fromSeed } = reconcile(
+      userDeck[f as SeededDeckField],
+      seed[f as SeededDeckField],
+      userDeck.seedFingerprints?.[f]
+    )
+    deckFields[f as SeededDeckField] = value
+    if (fromSeed && !isEmpty(value)) deckStamps[f] = fingerprint(value)
+  }
+
+  return {
+    ...seed,
+    ...deckFields,
+    // A user-imported back, like card art, is theirs.
+    back: userDeck.back !== undefined ? userDeck.back : seed.back,
+    backVersion: userDeck.backVersion !== undefined ? userDeck.backVersion : seed.backVersion,
+    createdAt: userDeck.createdAt,
+    cards,
+    seedFingerprints: deckStamps
+  }
 }
 
 export interface Stores {
@@ -279,12 +458,14 @@ export function createStores(dir: string, bundledDecksDir: string): Stores {
     ensureDecksSeeded: async (now) => {
       const seeds = buildSeedDecks(now)
       if (!(await decks.exists())) {
-        await decks.save({ version: DECKS_VERSION, decks: seeds })
+        // Stamp on the way in, so a first install already knows which text it
+        // shipped and the very next bump can reason about provenance.
+        await decks.save({ version: DECKS_VERSION, decks: seeds.map(stampSeedDeck) })
         return
       }
       // Merge built-ins: add any the user is missing, and update an existing
       // built-in when its seed has a newer seedVersion (a content update) —
-      // preserving the user's per-card meanings/keywords via mergeSeedDeck.
+      // preserving anything the user authored via mergeSeedDeck.
       // User-created decks and customized decks at the current version are
       // left untouched.
       const next = [...(await decks.load()).decks]
@@ -293,9 +474,24 @@ export function createStores(dir: string, bundledDecksDir: string): Stores {
       for (const seed of seeds) {
         const i = indexById.get(seed.id)
         if (i === undefined) {
-          next.push(seed)
+          next.push(stampSeedDeck(seed))
           changed = true
-        } else if (next[i].builtIn && (seed.seedVersion ?? 1) > (next[i].seedVersion ?? 1)) {
+          continue
+        }
+        if (!next[i].builtIn) continue
+
+        // Backfill provenance BEFORE the version gate, and on every boot until
+        // it has happened. An install that predates stamps has no way to tell
+        // "we wrote this" from "the user wrote this", and the only moment that
+        // question is answerable is while the stored text still equals the seed
+        // it came from — which stops being true the instant a bump lands.
+        const backfilled = backfillSeedFingerprints(next[i], seed)
+        if (backfilled !== next[i]) {
+          next[i] = backfilled
+          changed = true
+        }
+
+        if ((seed.seedVersion ?? 1) > (next[i].seedVersion ?? 1)) {
           next[i] = mergeSeedDeck(next[i], seed)
           changed = true
         }

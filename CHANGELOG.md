@@ -53,7 +53,11 @@ keeps all of your data on your own machine.
 - **Card meanings** — each built-in deck ships a meaning and keywords for every
   card. Corvath writes the text in the register of that deck. It does not reuse
   one set of text across the four decks. Rider-Waite-Smith also holds reversed
-  meanings. You can edit all of this text.
+  meanings. You can edit all of this text. **An update never overwrites your
+  edits.** Corvath records the text that it writes. A later update replaces only
+  that text, and corrects the cards that you leave alone. Your own words stay.
+  Your imported art, your card backs, your renames, and any card that you add to
+  a built-in deck stay with them.
 - **Layouts** — a visual builder for spreads. Drag the positions on a board, name
   each slot, mark the crossing cards, and set the end of the deck that each slot
   draws from. Corvath ships four spreads: Single Card, Three Card, Celtic Cross,

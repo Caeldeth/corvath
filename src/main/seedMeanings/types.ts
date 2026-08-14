@@ -5,9 +5,19 @@
  * bulky and per-deck: a deck's voice belongs to its art, so the same card carries
  * different words in the Argent and the Empyrean.
  *
- * A seeded value wins over a user's own edit when a seedVersion bump merges
- * (see mergeSeedDeck / preferSeedString in store.ts). That's why every field is
- * optional — leaving one out is how you defer to whatever the user typed.
+ * **A seeded value never overwrites a user's own edit** (see `mergeSeedDeck` in
+ * store.ts). A bump replaces only the text corvath itself last wrote, proved by
+ * a per-field fingerprint stored beside the card; anything the user has since
+ * changed is theirs and stays.
+ *
+ * This is the reverse of the rule that used to be documented here — a non-empty
+ * seed value winning outright. That was harmless only while the seeds were
+ * empty, and every deck now ships full text, so the old rule meant the next
+ * meanings correction would silently destroy whatever a user had written over
+ * it (HTOO-231).
+ *
+ * Every field stays optional, but the reason changed: an absent field is one
+ * this deck simply does not specify, not a way of deferring to the user.
  */
 export interface CardMeaning {
   keywords?: string[]
