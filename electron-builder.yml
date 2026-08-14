@@ -28,9 +28,17 @@ asarUnpack:
   - bundled/**
 win:
   executableName: corvath
-  # 1.0 ships a single portable exe. The nsis block below is kept ready to be
-  # added back to this list.
+  # BOTH, and the release workflow names neither. `release.yml` packages with a
+  # bare `--win`, so this list is the only statement of what Windows ships.
+  # A target list in two places is a target list that disagrees with itself:
+  # taliesin declared nsis here since WP14 while its workflow packaged
+  # `--win portable`, so it shipped no installer for eight releases and every
+  # gate passed (HTOO-369). scripts/release-artifacts.test.mjs pins this list
+  # against the release job's globs in both directions.
   target:
+    - target: nsis
+      arch:
+        - x64
     - target: portable
       arch:
         - x64
@@ -44,10 +52,28 @@ portable:
   # Regenerate with: node scripts/make-portable-splash.mjs
   splashImage: build/portable-splash.bmp
 nsis:
+  # Predictable name for the release workflow's sign + upload steps. The default
+  # is "Corvath Tarot Setup <version>.exe", with spaces, which every path in that
+  # workflow would then have to quote.
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
+  # Assisted rather than one-click, and per-user rather than per-machine. The
+  # three settle together, and match taliesin, creidhne and epona:
+  #   * oneClick: false gives a wizard rather than an install that starts on
+  #     double-click.
+  #   * perMachine: false installs under the user profile, so there is no UAC
+  #     prompt and no administrator requirement. It also agrees with where the
+  #     app already keeps its data: %LOCALAPPDATA%\Erisco\Corvath.
+  #   * allowToChangeInstallationDirectory only has an effect while oneClick is
+  #     false; NSIS has no directory page to offer in a one-click install.
+  # perMachine is the expensive one to revisit: a per-machine installer does NOT
+  # upgrade an existing per-user installation, and the user ends with two. It is
+  # safe to settle now only because corvath has never shipped an installer.
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
 
 # mac/linux are scaffolded ahead of signing. The CI jobs build them on every
 # release; the mac job signs and notarizes only when Apple credentials exist, so

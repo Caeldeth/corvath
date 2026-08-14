@@ -70,6 +70,13 @@ keeps all of your data on your own machine.
   Corvath draws its own title bar, which has no window frame.
 - **Update notification** — Corvath looks for a newer release at launch, and
   offers you a link to it. It downloads nothing and installs nothing.
+- **An installer for Windows** — a release now carries
+  `corvath-<version>-setup.exe` beside the portable exe. The installer asks you
+  where to put Corvath. It adds a Start menu entry and a desktop shortcut, and it
+  lists Corvath in Installed apps. It installs for the current user only, so it
+  needs no administrator rights. Run it again to upgrade in place. Both downloads
+  read the same settings, so you can move from one to the other. An uninstall
+  leaves your readings, decks and layouts on the machine.
 - **macOS and Linux builds** — a release now carries a macOS `.dmg` beside the
   Windows portable exe. The `.dmg` is universal, for Apple Silicon and Intel. A
   release also carries a Linux AppImage and a `.deb` package. Corvath does not

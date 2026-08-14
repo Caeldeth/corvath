@@ -36,15 +36,15 @@ hardening, image cache-busting, dependency upgrades, cleanups).
 
 Do not relitigate these without a reason; each was decided deliberately.
 
-| Decision          | Choice                                                                                                                                                                              |
-| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Branding / vendor | **Erisco**. `appId: co.eris.corvath`, all data under `%LOCALAPPDATA%/Erisco/Corvath` (local, never roaming).                                                                        |
-| Draw modes        | **Both** — deal-from-top and fan-and-pick — over layout-or-free-N-card. Seeded RNG (`mulberry32`); the seed is stored so a draw is reproducible.                                    |
-| Auto-update       | **Notification only.** `updateCheck.ts` polls the GitHub releases API and raises a Snackbar. No electron-updater, no auto-download.                                                 |
-| Reading export    | **JSON, round-trippable** — exports to exactly the shape `parseReadingsImport` accepts.                                                                                             |
-| Custom decks      | Portable `.corvathdeck` zip (deck.json + `images/`) via `fflate`.                                                                                                                   |
-| Build targets     | Windows **portable** (not nsis) is the shipping target. macOS dmg and Linux AppImage/deb are scaffolded and build in CI; both are **unsigned** until certificates exist.            |
-| App icon          | The raven + heptagram "argent" art, corvath's own — not a Hyb colour variant like the sibling apps. macOS uses a separate squircle variant (see WP notes and `build/icon-mac.png`). |
+| Decision          | Choice                                                                                                                                                                                                                                                                                        |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Branding / vendor | **Erisco**. `appId: co.eris.corvath`, all data under `%LOCALAPPDATA%/Erisco/Corvath` (local, never roaming).                                                                                                                                                                                  |
+| Draw modes        | **Both** — deal-from-top and fan-and-pick — over layout-or-free-N-card. Seeded RNG (`mulberry32`); the seed is stored so a draw is reproducible.                                                                                                                                              |
+| Auto-update       | **Notification only.** `updateCheck.ts` polls the GitHub releases API and raises a Snackbar. No electron-updater, no auto-download.                                                                                                                                                           |
+| Reading export    | **JSON, round-trippable** — exports to exactly the shape `parseReadingsImport` accepts.                                                                                                                                                                                                       |
+| Custom decks      | Portable `.corvathdeck` zip (deck.json + `images/`) via `fflate`.                                                                                                                                                                                                                             |
+| Build targets     | Windows ships **both nsis and portable**, matching taliesin, creidhne and epona. The installer is assisted and **per-user** (`perMachine: false`), which is expensive to reverse once released. macOS dmg and Linux AppImage/deb build in CI; both are **unsigned** until certificates exist. |
+| App icon          | The raven + heptagram "argent" art, corvath's own — not a Hyb colour variant like the sibling apps. macOS uses a separate squircle variant (see WP notes and `build/icon-mac.png`).                                                                                                           |
 
 ## Milestone — v1.0.0
 
