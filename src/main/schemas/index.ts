@@ -85,7 +85,8 @@ const deckCardSchema = z.object({
   imageVersion: z.number().optional(),
   keywords: z.array(z.string()).optional(),
   meaning: z.string().optional(),
-  meaningReversed: z.string().optional()
+  meaningReversed: z.string().optional(),
+  seedFingerprints: z.record(z.string(), z.string()).optional()
 })
 
 export const deckSchema: z.ZodType<Deck> = z.object({
@@ -102,7 +103,8 @@ export const deckSchema: z.ZodType<Deck> = z.object({
   backVersion: z.number().optional(),
   cards: z.array(deckCardSchema),
   createdAt: z.string(),
-  updatedAt: z.string()
+  updatedAt: z.string(),
+  seedFingerprints: z.record(z.string(), z.string()).optional()
 })
 
 export const decksSchema = z.array(deckSchema)

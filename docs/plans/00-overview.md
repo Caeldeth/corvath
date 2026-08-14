@@ -72,7 +72,10 @@ portable extraction splash, and this docs layout.
 - **Draw-tab UI is not automated.** The draw engine has unit tests and boot/settings/theme
   have Playwright specs, but nobody has click-tested both draw modes for animation, art and
   fan row-fit. Worth an eyeball pass in `npm run dev` before the tag.
-- **Seed overwrites user edits.** `preferSeedString` in `store.ts` makes a non-empty seed
-  value win over a user's edit on a `seedVersion` bump. Harmless while the seeds were empty;
-  it is not now that all four decks ship meanings. Any future meanings update will silently
-  overwrite a user's own text. Revisit post-1.0 — tracked in [00a-backlog.md](00a-backlog.md).
+- ~~**Seed overwrites user edits.**~~ **Fixed 2026-08-14 (HTOO-231).** `mergeSeedDeck` now
+  decides each field by provenance: a per-field fingerprint records what corvath itself
+  shipped, so a `seedVersion` bump replaces only text that still matches what we wrote.
+  Anything the user changed — and anything unstamped — is theirs. The same pass stopped the
+  merge discarding imported card art, card backs, renames, and cards added to a built-in
+  deck. **This unblocks WP1:** bumping `hybrasyl` from `seedVersion` 3 to 4 is now safe even
+  if meanings change in the same release.

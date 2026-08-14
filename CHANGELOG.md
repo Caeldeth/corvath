@@ -43,7 +43,10 @@ and stays local.
 - **Card meanings** — every built-in deck ships a meaning and keywords for each
   card, written in that deck's own register rather than one set of text reused
   across all four. Rider-Waite-Smith also carries reversed meanings. They are
-  yours to edit.
+  yours to edit. **An update never overwrites your edits.** Corvath records
+  which text it wrote. A later update replaces only that text, and it corrects
+  the cards you left alone. Your own words stay, and so do your imported art,
+  your card backs, your renames, and any card you add to a built-in deck.
 - **Layouts** — a visual spread builder: drag positions on a board, name each
   slot, mark crossing cards, and set which end of the deck a slot draws from.
   Single Card, Three Card, Celtic Cross, and Horseshoe ship seeded. A recorded

@@ -107,6 +107,16 @@ export interface DeckCard {
   keywords?: string[]
   meaning?: string
   meaningReversed?: string
+  /**
+   * Fingerprints of the values this card was SEEDED with, per field.
+   *
+   * Provenance, not content: it answers "did we write this, or did the user?"
+   * A field present here still matches what the seed shipped, so a seedVersion
+   * bump may replace it. A field ABSENT here is the user's and is never
+   * overwritten. Only fields the seed owns are tracked — see SEEDED_CARD_FIELDS
+   * in store.ts. Undefined on user-created decks, which have no seed.
+   */
+  seedFingerprints?: Record<string, string>
 }
 
 /**
@@ -134,6 +144,8 @@ export interface Deck {
   cards: DeckCard[]
   createdAt: string
   updatedAt: string
+  /** As `DeckCard.seedFingerprints`, for the deck's own `name` / `description`. */
+  seedFingerprints?: Record<string, string>
 }
 
 /** Custom frameless-window controls exposed to the renderer. */
