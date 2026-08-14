@@ -2,7 +2,7 @@
   "name": "corvath",
   "desktopName": "corvath.desktop",
   "version": "1.0.0",
-  "description": "Corvath Tarot",
+  "description": "Corvath",
   "main": "./out/main/index.js",
   "author": "Caeldeth",
   "scripts": {

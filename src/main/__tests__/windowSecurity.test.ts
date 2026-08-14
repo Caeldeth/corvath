@@ -14,14 +14,7 @@ import {
 // windowSecurity imports electron for TYPES only, so it runs unmodified in the
 // node project against these fakes — no electron mock needed.
 
-const PROD_INDEX = join(
-  'C:',
-  'Program Files',
-  'Corvath Tarot',
-  'resources',
-  'app.asar',
-  'index.html'
-)
+const PROD_INDEX = join('C:', 'Program Files', 'Corvath', 'resources', 'app.asar', 'index.html')
 const PROD_URL = pathToFileURL(PROD_INDEX).href
 const DEV_URL = 'http://127.0.0.1:5173/'
 

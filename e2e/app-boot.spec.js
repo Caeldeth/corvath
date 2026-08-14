@@ -18,7 +18,7 @@ test.describe('App boots', () => {
     const page = await getMainWindow(electronApp)
 
     await expect(page.getByTestId('title-bar')).toBeVisible()
-    await expect(page.getByTestId('title-bar')).toContainText('Corvath Tarot')
+    await expect(page.getByTestId('title-bar')).toContainText('Corvath')
 
     // Hydration finished: the real page is shown, not the loading spinner.
     await expect(page.getByTestId('app-hydrating')).toHaveCount(0)

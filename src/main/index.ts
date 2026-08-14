@@ -103,7 +103,7 @@ function createWindow(): void {
     autoHideMenuBar: true,
     frame: false,
     icon,
-    title: 'Corvath Tarot',
+    title: 'Corvath',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       // Checked, not assumed. The preload uses no node built-ins, but that alone

@@ -1,4 +1,4 @@
-# Corvath Tarot
+# Corvath
 
 A small Electron desktop app for recording tarot readings. Each **reading** is a session
 (title, date, deck, optional spread) containing a list of **cards** — each with a topic, a

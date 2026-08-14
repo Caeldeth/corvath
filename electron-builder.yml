@@ -1,5 +1,5 @@
 appId: co.eris.corvath
-productName: Corvath Tarot
+productName: Corvath
 # The 1254px master is BUILD-TIME ONLY, so it lives in buildResources (build/) and is
 # never packaged. The runtime derivatives in resources/ are sized to what draws them:
 # corvath-icon-256.png (window/taskbar) and corvath-splash.webp (84px splash glyph).
@@ -53,7 +53,7 @@ portable:
   splashImage: build/portable-splash.bmp
 nsis:
   # Predictable name for the release workflow's sign + upload steps. The default
-  # is "Corvath Tarot Setup <version>.exe", with spaces, which every path in that
+  # is "Corvath Setup <version>.exe", with spaces, which every path in that
   # workflow would then have to quote.
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}
@@ -126,9 +126,15 @@ linux:
   # missed: oghma shipped the right sizes and still drew a generic taskbar icon.
   # Electron derives its app_id / WM_CLASS from package.json's `desktopName`
   # (corvath.desktop -> "corvath"), while electron-builder writes StartupWMClass
-  # from productName ("Corvath Tarot") when this is unset. That mismatch stops a
+  # from productName ("Corvath") when this is unset. That mismatch stops a
   # desktop environment linking the running window to the installed entry,
   # however correct build/icons/ is.
+  #
+  # Since productName became "Corvath" the two differ ONLY IN CASE, which reads
+  # like a harmless cosmetic difference and is not: StartupWMClass matching is
+  # case-sensitive, so "Corvath" still fails to match "corvath" and the taskbar
+  # icon still falls back to generic. Do not delete this on the grounds that the
+  # names now "look the same".
   #
   # `desktopName` itself lives in package.json, NOT here: there is no
   # linux.desktopName key in the schema, and putting it here does not get

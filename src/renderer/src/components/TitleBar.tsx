@@ -69,7 +69,7 @@ export default function TitleBar({ themeName, onThemeChange }: TitleBarProps) {
           variant="h6"
           sx={{ fontSize: '1rem', letterSpacing: '0.14em', color: chromeFg }}
         >
-          Corvath Tarot
+          Corvath
         </Typography>
 
         <Box sx={{ flexGrow: 1 }} />
