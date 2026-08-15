@@ -236,5 +236,11 @@ export interface TarotApi {
   appReady(): void
   /** Subscribe to an available-update notification; returns an unsubscribe function. */
   onUpdateAvailable(callback: (info: UpdateInfo) => void): () => void
+  /** This build's version string, for the About card. */
+  getAppVersion(): Promise<string>
+  /** Open the corvath data folder in the OS file manager. */
+  revealSettings(): void
+  /** The packaged CHANGELOG.md as raw markdown, or '' if it cannot be read. */
+  readChangelog(): Promise<string>
   window: WindowControls
 }

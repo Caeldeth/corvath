@@ -44,6 +44,17 @@ export interface HandlerContext {
   store: Stores
   /** Called once when the renderer signals `app:ready` (reveals the window). */
   onAppReady?: () => void
+  /** This build's version, for the About card. */
+  appVersion?: () => string
+  /**
+   * Open the data folder in the OS file manager.
+   *
+   * Injected rather than importing `shell` here, like the dialog functions
+   * above, so the unit tests need no electron stub.
+   */
+  revealSettings?: () => void
+  /** The packaged CHANGELOG.md, for the What's New dialog. */
+  readChangelog?: () => Promise<string>
 }
 
 export const getReadings = (ctx: HandlerContext): Promise<Reading[]> => ctx.store.loadReadings()
@@ -231,4 +242,11 @@ export function registerHandlers(
 
   // Reveal handshake: the renderer signals once it has hydrated.
   ipcMain.once('app:ready', () => ctx.onAppReady?.())
+
+  // About card. `getVersion` reads package.json through Electron, which is why
+  // e2e launches the project DIRECTORY rather than out/main/index.js — given a
+  // file, this would report Electron's own version instead of corvath's.
+  ipcMain.handle('app:getVersion', () => ctx.appVersion?.() ?? '')
+  ipcMain.on('app:revealSettings', () => ctx.revealSettings?.())
+  ipcMain.handle('app:readChangelog', () => ctx.readChangelog?.() ?? '')
 }

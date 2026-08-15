@@ -68,7 +68,7 @@ export default function DeckBuilder({ api }: DeckBuilderProps) {
   }
 
   return (
-    <Box sx={{ flexGrow: 1, display: 'flex', minHeight: 0 }}>
+    <Box data-testid="decks-page" sx={{ flexGrow: 1, display: 'flex', minHeight: 0 }}>
       <DeckList
         decks={decks}
         selectedId={selectedId}

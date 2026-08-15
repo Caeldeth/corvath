@@ -48,6 +48,9 @@ const api: TarotApi = {
   saveSettings: (settings: Settings): Promise<void> =>
     ipcRenderer.invoke('settings:save', settings),
   appReady: (): void => ipcRenderer.send('app:ready'),
+  getAppVersion: (): Promise<string> => ipcRenderer.invoke('app:getVersion'),
+  revealSettings: (): void => ipcRenderer.send('app:revealSettings'),
+  readChangelog: (): Promise<string> => ipcRenderer.invoke('app:readChangelog'),
   onUpdateAvailable: (callback: (info: UpdateInfo) => void): (() => void) => {
     const listener = (_e: IpcRendererEvent, info: UpdateInfo): void => callback(info)
     ipcRenderer.on('update:available', listener)

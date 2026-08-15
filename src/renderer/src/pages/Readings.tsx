@@ -94,7 +94,7 @@ export default function Readings({
   }
 
   return (
-    <Box sx={{ flexGrow: 1, display: 'flex', minHeight: 0 }}>
+    <Box data-testid="readings-page" sx={{ flexGrow: 1, display: 'flex', minHeight: 0 }}>
       <ReadingList
         readings={readings}
         selectedId={selectedId}

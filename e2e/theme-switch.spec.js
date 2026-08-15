@@ -33,6 +33,9 @@ test.describe('Themes', () => {
 
     const backgrounds = new Set()
 
+    // The picker moved to Settings (HTOO-408); it is a page now, not chrome.
+    await page.getByRole('tab', { name: 'Settings', exact: true }).click()
+
     for (const theme of THEMES) {
       await page.getByTestId('theme-select').click()
       await page.getByRole('option', { name: theme.label, exact: true }).click()

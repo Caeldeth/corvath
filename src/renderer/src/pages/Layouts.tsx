@@ -38,7 +38,7 @@ export default function Layouts({ api }: LayoutsProps) {
   }
 
   return (
-    <Box sx={{ flexGrow: 1, display: 'flex', minHeight: 0 }}>
+    <Box data-testid="layouts-page" sx={{ flexGrow: 1, display: 'flex', minHeight: 0 }}>
       <LayoutList
         layouts={layouts}
         selectedId={selectedId}

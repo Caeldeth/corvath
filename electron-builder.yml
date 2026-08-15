@@ -20,6 +20,7 @@ files:
   - resources/** # splash.html + the window/splash icon; also the renderer publicDir
   - node_modules/** # main+preload runtime deps only (see _dependenciesNote in package.json)
   - package.json # electron reads name/version/main at boot
+  - CHANGELOG.md # read at runtime by the About card's "What's new" dialog
   - bundled/** # shipped deck art, read at runtime from <appRoot>/bundled/decks/
 # `bundled/` is 83 MB of deck art. Keep it OUT of the asar so it is read as ordinary
 # files (main resolves it via join(__dirname, '../../bundled/decks')) and so the archive

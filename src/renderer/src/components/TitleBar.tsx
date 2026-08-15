@@ -1,20 +1,11 @@
 import { useEffect, useState } from 'react'
-import {
-  AppBar,
-  Box,
-  IconButton,
-  MenuItem,
-  Select,
-  Toolbar,
-  Tooltip,
-  Typography
-} from '@mui/material'
+import { AppBar, Box, IconButton, Toolbar, Tooltip, Typography } from '@mui/material'
 import MinimizeIcon from '@mui/icons-material/Minimize'
 import CropSquareIcon from '@mui/icons-material/CropSquare'
 import FilterNoneIcon from '@mui/icons-material/FilterNone'
 import CloseIcon from '@mui/icons-material/Close'
 import type { ThemeName } from '../../../shared/types'
-import { PLAIN_CHROME_THEMES, THEME_OPTIONS } from '../themes'
+import { PLAIN_CHROME_THEMES } from '../themes'
 // 64px WebP for a 22px render, imported so vite fingerprints and bundles it. The
 // previous `BASE_URL + 'corvath.png'` pulled the 1254px/2.36 MB master out of the
 // publicDir, which also meant a second copy of it in the packaged app.
@@ -24,11 +15,11 @@ import logoUrl from '../assets/corvath.webp'
 const noDrag = { WebkitAppRegion: 'no-drag' } as const
 
 interface TitleBarProps {
+  /** Still needed: the plain-chrome themes repaint the bar's foreground. */
   themeName: ThemeName
-  onThemeChange: (name: ThemeName) => void
 }
 
-export default function TitleBar({ themeName, onThemeChange }: TitleBarProps) {
+export default function TitleBar({ themeName }: TitleBarProps) {
   const [maximized, setMaximized] = useState(false)
 
   useEffect(() => {
@@ -38,23 +29,12 @@ export default function TitleBar({ themeName, onThemeChange }: TitleBarProps) {
 
   // The corporate themes paint a flat navy/charcoal bar. Mundanes is a light
   // theme, so its default input/text colors are dark and would vanish on the
-  // navy bar — force white chrome foreground and a translucent-white Select
-  // outline when a plain-chrome theme is active. The four stylized themes carry
-  // their own dark chrome and need no override.
+  // navy bar — force a white chrome foreground when a plain-chrome theme is
+  // active. The four stylized themes carry their own dark chrome and need no
+  // override. (The theme Select that also needed this lives on the Settings
+  // page now, on an ordinary Paper, so it needs no chrome override at all.)
   const plain = PLAIN_CHROME_THEMES.includes(themeName)
   const chromeFg = plain ? 'common.white' : undefined
-  const selectSx = plain
-    ? {
-        ...noDrag,
-        minWidth: 130,
-        mr: 1,
-        color: 'common.white',
-        '& .MuiSvgIcon-root': { color: 'common.white' },
-        '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.4)' },
-        '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.7)' },
-        '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.9)' }
-      }
-    : { ...noDrag, minWidth: 130, mr: 1 }
 
   return (
     <AppBar position="static" elevation={0} sx={{ WebkitAppRegion: 'drag', userSelect: 'none' }}>
@@ -73,21 +53,6 @@ export default function TitleBar({ themeName, onThemeChange }: TitleBarProps) {
         </Typography>
 
         <Box sx={{ flexGrow: 1 }} />
-
-        <Select
-          size="small"
-          value={themeName}
-          onChange={(e) => onThemeChange(e.target.value as ThemeName)}
-          aria-label="theme"
-          data-testid="theme-select"
-          sx={selectSx}
-        >
-          {THEME_OPTIONS.map((option) => (
-            <MenuItem key={option.value} value={option.value}>
-              {option.label}
-            </MenuItem>
-          ))}
-        </Select>
 
         <Tooltip title="Minimize">
           <IconButton
