@@ -3,30 +3,34 @@ import { Box, Button, Link, Stack, Typography } from '@mui/material'
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 import NewReleasesOutlinedIcon from '@mui/icons-material/NewReleasesOutlined'
 import FolderOpenOutlinedIcon from '@mui/icons-material/FolderOpenOutlined'
+import BugReportOutlinedIcon from '@mui/icons-material/BugReportOutlined'
 import { cardHeadingSx } from '../lib/settingsCardSx'
 // 128px WebP for a 48px render — 2x DPR with headroom, per R-002's rule of
 // render size x DPR rather than a fixed number. The title bar's 64px asset is
 // sized for its own 22px render and would be soft here.
 import appIcon from '../assets/corvath-128.webp'
+import { useReportStore } from '../store/reportStore'
 import AboutDialog from './AboutDialog'
 import WhatsNewDialog from './WhatsNewDialog'
 
 /**
  * What corvath is, which build you are running, and where it keeps your files.
  *
- * Both dialogs' open state is local: nothing else in the app opens either one.
+ * About and What's New keep their open state LOCAL: each has exactly one opener.
+ * **Report an issue is the exception**, and its flag lives on `reportStore`
+ * because it has two — this button and the error boundary's fallback, which
+ * renders after `App` is gone.
  *
- * **There is no "Report an issue" button, and that is a decision rather than an
- * omission.** Balor's card has one, wired to a report dialog and a `reportStore`.
- * Corvath is a personal repo with no issue-report module and no triage on the
- * other end, so a button promising one would be a dead end; the
- * `github.com/hybrasyl` link below is the honest version of the same affordance.
- * Revisit if corvath ever gains the house report-issue module.
+ * There is still no "Reveal logs" button here. The house module doc is explicit
+ * that reveal-logs belongs on the report dialog; epona shipped it in both places
+ * and dropped the About-card copy. It is one click away, on the surface where a
+ * person actually wants it.
  */
 export default function AboutCard(): ReactElement {
   const [version, setVersion] = useState('')
   const [aboutOpen, setAboutOpen] = useState(false)
   const [whatsNewOpen, setWhatsNewOpen] = useState(false)
+  const openReport = useReportStore((s) => s.setOpen)
 
   useEffect(() => {
     let live = true
@@ -105,6 +109,18 @@ export default function AboutCard(): ReactElement {
           data-testid="reveal-settings"
         >
           Reveal data folder
+        </Button>
+        {/* Reports go to the shared public intake (hybrasyl/cernunnos), not to
+            corvath's own repository: a prefilled issues/new URL needs the
+            reporter to have access to the target repo, and this one is
+            personal. The app: label is what makes it triageable. */}
+        <Button
+          variant="outlined"
+          startIcon={<BugReportOutlinedIcon />}
+          onClick={() => openReport(true)}
+          data-testid="report-issue"
+        >
+          Report an issue…
         </Button>
       </Stack>
 

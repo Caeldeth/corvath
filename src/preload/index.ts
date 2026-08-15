@@ -8,6 +8,8 @@ import type {
   Reading,
   ReadingExportResult,
   SavedImage,
+  OpenIssueResult,
+  RendererErrorReport,
   Settings,
   TarotApi,
   UpdateInfo
@@ -51,6 +53,18 @@ const api: TarotApi = {
   getAppVersion: (): Promise<string> => ipcRenderer.invoke('app:getVersion'),
   revealSettings: (): void => ipcRenderer.send('app:revealSettings'),
   readChangelog: (): Promise<string> => ipcRenderer.invoke('app:readChangelog'),
+  diagnostics: {
+    build: (): Promise<string> => ipcRenderer.invoke('diagnostics:build'),
+    openIssue: (title: string, body: string): Promise<OpenIssueResult> =>
+      ipcRenderer.invoke('diagnostics:openIssue', { title, body }),
+    copyReport: (body: string): Promise<{ ok: true }> =>
+      ipcRenderer.invoke('diagnostics:copyReport', { body }),
+    // A send, not an invoke: this runs from an error handler, and awaiting a
+    // reply while reporting a crash is a way to turn one fault into a hang.
+    reportError: (report: RendererErrorReport): void =>
+      ipcRenderer.send('diagnostics:reportError', report),
+    revealLogs: (): void => ipcRenderer.send('diagnostics:revealLogs')
+  },
   onUpdateAvailable: (callback: (info: UpdateInfo) => void): (() => void) => {
     const listener = (_e: IpcRendererEvent, info: UpdateInfo): void => callback(info)
     ipcRenderer.on('update:available', listener)

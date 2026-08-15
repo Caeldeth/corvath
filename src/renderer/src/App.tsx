@@ -11,6 +11,8 @@ import { useLayouts } from './hooks/useLayouts'
 import TitleBar from './components/TitleBar'
 import SettingsPage from './pages/SettingsPage'
 import UpdateSnackbar from './components/UpdateSnackbar'
+import ReportIssueDialog from './components/ReportIssueDialog'
+import { useReportStore } from './store/reportStore'
 import NavBar, { type View } from './components/NavBar'
 import Readings from './pages/Readings'
 import Draw from './pages/Draw'
@@ -62,6 +64,8 @@ function App(): React.JSX.Element {
   const decksApi = useDecks()
   const layoutsApi = useLayouts()
   const [update, setUpdate] = useState<UpdateInfo | null>(null)
+  const reportOpen = useReportStore((s) => s.open)
+  const setReportOpen = useReportStore((s) => s.setOpen)
 
   // Surface an available-update notification from main (best-effort, once).
   useEffect(() => window.api.onUpdateAvailable(setUpdate), [])
@@ -155,6 +159,9 @@ function App(): React.JSX.Element {
         {view === 'settings' && <SettingsPage theme={themeName} onThemeChange={changeTheme} />}
 
         <UpdateSnackbar update={update} onDismiss={() => setUpdate(null)} />
+        {/* Mounted here rather than in the About card because it has two
+            openers: that button, and the error boundary's own copy. */}
+        <ReportIssueDialog open={reportOpen} onClose={() => setReportOpen(false)} />
       </Box>
     </ThemeProvider>
   )

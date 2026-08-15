@@ -117,3 +117,20 @@ export const saveImageArgsSchema = z.object({
   ext: z.string(),
   data: z.instanceof(Uint8Array)
 })
+
+// Report Issue module payloads. Parsed like every other mutating payload — the
+// guardIpc proxy answers "who sent this", these answer "is it the right shape".
+export const rendererErrorSchema = z.object({
+  source: z.string(),
+  message: z.string(),
+  stack: z.string().optional()
+})
+
+export const openIssueArgsSchema = z.object({
+  title: z.string(),
+  body: z.string()
+})
+
+export const copyReportArgsSchema = z.object({
+  body: z.string()
+})

@@ -83,6 +83,36 @@ test.describe('Settings page', () => {
     await expect(page.getByTestId('reveal-settings')).toBeVisible()
   })
 
+  test('builds a real scrubbed diagnostics block for a report', async () => {
+    // The report dialog is only honest if the block it shows is the block that
+    // gets sent, so this asserts the round trip through main rather than that a
+    // dialog opened. It deliberately does not press "Open GitHub issue" — that
+    // hands a URL to the OS and writes the clipboard.
+    ;({ electronApp } = await launchApp())
+    const page = await getMainWindow(electronApp)
+    await page.getByRole('tab', { name: 'Settings', exact: true }).click()
+    await page.getByTestId('report-issue').click()
+
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toBeVisible()
+    const diagnostics = dialog.getByLabel('Diagnostics (editable)')
+    await expect(diagnostics).not.toHaveValue('')
+    await expect(diagnostics).not.toHaveValue('(diagnostics unavailable)')
+
+    const block = await diagnostics.inputValue()
+    expect(block).toMatch(/^App: Corvath \d+\.\d+\.\d+/m)
+    expect(block).toMatch(/^OS: (windows|macOS|linux|other)$/m)
+    // A clean boot has nothing to report, and the block says so in a sentence
+    // rather than leaving an empty section that reads as a failed collection.
+    expect(block).toContain('No errors captured this session.')
+    // Nothing identifying survived into it.
+    expect(block).not.toMatch(/[\w.+-]+@[\w-]+\.[\w.-]+/)
+    expect(block).not.toMatch(/[A-Za-z]:\\Users\\[^\\<]/)
+
+    // Editable is the feature: the user must be able to change what is sent.
+    await expect(diagnostics).toBeEditable()
+  })
+
   test("shows the newest changelog section in What's new", async () => {
     // CHANGELOG.md is only readable in a packaged build because it is named in
     // electron-builder.yml's `files` allowlist, which fails CLOSED. This is the

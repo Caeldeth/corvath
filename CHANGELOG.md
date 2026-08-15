@@ -39,6 +39,12 @@ keeps all of your data on your own machine.
   About card names this build's version, links to hybrasyl.com and the source,
   shows the newest changelog entry, and opens the folder that holds your data.
   The theme picker moved here from the title bar.
+- **Report an issue** — the About card opens a report dialog. Corvath shows you
+  the diagnostics it will attach, and you can edit them before you send. Corvath
+  removes usernames, file paths, e-mail addresses and IP addresses from the text
+  first. The report opens as a new issue in your browser, and the full text also
+  goes to your clipboard. Corvath keeps the errors from the last five sessions in
+  a `logs` folder, and the dialog opens that folder.
 - **Draw** — draw a reading against any deck. Use a saved spread, or draw a free
   run of N cards. Corvath gives you two modes. **Deal from top** turns over one
   slot at a time, and obeys the draw source that each position sets. **Fan and

@@ -21,17 +21,22 @@ import type {
   DeckExportResult,
   DeckImportResult,
   Layout,
+  OpenIssueResult,
   Reading,
   ReadingExportResult,
+  RendererErrorReport,
   SavedImage,
   Settings
 } from '../shared/types'
 import type { Stores } from './store'
 import {
+  copyReportArgsSchema,
   decksSchema,
   deckSchema,
   layoutsSchema,
+  openIssueArgsSchema,
   readingsSchema,
+  rendererErrorSchema,
   saveImageArgsSchema,
   settingsSchema
 } from './schemas'
@@ -55,6 +60,15 @@ export interface HandlerContext {
   revealSettings?: () => void
   /** The packaged CHANGELOG.md, for the What's New dialog. */
   readChangelog?: () => Promise<string>
+  /** Report Issue module. Injected, so this file stays free of a runtime
+   *  `electron` import and the node test project can still load it. */
+  diagnostics?: {
+    build: () => string
+    openIssue: (p: { title: string; body: string }) => OpenIssueResult
+    copyReport: (p: { body: string }) => { ok: true }
+    captureRendererError: (report: RendererErrorReport) => void
+    revealLogs: () => void
+  }
 }
 
 export const getReadings = (ctx: HandlerContext): Promise<Reading[]> => ctx.store.loadReadings()
@@ -249,4 +263,25 @@ export function registerHandlers(
   ipcMain.handle('app:getVersion', () => ctx.appVersion?.() ?? '')
   ipcMain.on('app:revealSettings', () => ctx.revealSettings?.())
   ipcMain.handle('app:readChangelog', () => ctx.readChangelog?.() ?? '')
+
+  // Report Issue. Every payload is parsed, like every other mutating channel;
+  // guardIpc has already answered who sent it.
+  ipcMain.handle('diagnostics:build', () => ctx.diagnostics?.build() ?? '')
+  ipcMain.handle('diagnostics:openIssue', (_e, args: unknown) => {
+    const parsed = openIssueArgsSchema.parse(args)
+    if (!ctx.diagnostics) return { ok: false, reason: 'unsafe-url' } as OpenIssueResult
+    return ctx.diagnostics.openIssue(parsed)
+  })
+  ipcMain.handle('diagnostics:copyReport', (_e, args: unknown) => {
+    const parsed = copyReportArgsSchema.parse(args)
+    return ctx.diagnostics?.copyReport(parsed) ?? { ok: true as const }
+  })
+  // A fire-and-forget `on`, because it runs from an error handler. A malformed
+  // payload is dropped rather than thrown back: this is the path that must never
+  // raise a second error while reporting the first.
+  ipcMain.on('diagnostics:reportError', (_e, report: unknown) => {
+    const parsed = rendererErrorSchema.safeParse(report)
+    if (parsed.success) ctx.diagnostics?.captureRendererError(parsed.data)
+  })
+  ipcMain.on('diagnostics:revealLogs', () => ctx.diagnostics?.revealLogs())
 }

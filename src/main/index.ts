@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, dialog, ipcMain, protocol, session } from 'electron'
+import { app, shell, BrowserWindow, clipboard, dialog, ipcMain, protocol, session } from 'electron'
 import { join, extname } from 'path'
 import { readFile } from 'fs/promises'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
@@ -9,6 +9,9 @@ import { createStores } from './store'
 import { createSplashWindow } from './splash'
 import { registerHandlers } from './handlers'
 import { checkForUpdate } from './updateCheck'
+import { captureError, getLogsDir, initSessionLog } from './sessionLog'
+import { installGlobalErrorHandlers } from './errorHandlers'
+import { buildDiagnostics, copyReport, openIssue, type DiagnosticsIo } from './diagnostics'
 import {
   cspForEnvironment,
   guardIpc,
@@ -31,6 +34,24 @@ const localAppData =
 
 const dataPath = join(localAppData, COMPANY, APP_DIR)
 app.setPath('userData', dataPath)
+
+// The two side effects main/diagnostics.ts needs, injected rather than imported
+// there. That keeps the module free of a runtime `electron` import — which is
+// what lets handlers.ts import it under the node test project — and it makes
+// "the clipboard gets the full body BEFORE the URL opens" an assertion on two
+// spies rather than an electron stub.
+const diagnosticsIo: DiagnosticsIo = {
+  writeClipboard: (text) => clipboard.writeText(text),
+  openExternal: (url) => {
+    void shell.openExternal(url)
+  }
+}
+
+// Installed at module scope, as early as anything can be: an uncaught error
+// during boot is exactly the one a report needs, and it can happen before
+// whenReady resolves. Capture rings-buffers until initSessionLog gives it a
+// file, which is the best-effort contract the whole module is built on.
+installGlobalErrorHandlers(captureError)
 
 // Bundled (shipped) deck art lives in <appRoot>/bundled/decks/<deckId>/.
 // __dirname is out/main in dev and inside the asar in production; both resolve
@@ -147,6 +168,10 @@ function createWindow(): void {
 app.whenReady().then(async () => {
   electronApp.setAppUserModelId('co.eris.corvath')
 
+  // Errors only, five sessions kept, in a subfolder of its own so "Reveal logs"
+  // has a target holding nothing else.
+  await initSessionLog(join(dataPath, 'logs'))
+
   // Establish what counts as "our own content" BEFORE any window loads. Until
   // this runs the trusted set is empty, which fails closed.
   initWindowSecurity(
@@ -195,6 +220,21 @@ app.whenReady().then(async () => {
       // CHANGELOG.md is named in electron-builder.yml's `files` allowlist purely
       // so this can read it. In dev the app root is the repo, so the same path
       // resolves either way.
+      diagnostics: {
+        build: () => buildDiagnostics(app.getVersion()),
+        openIssue: (p) => openIssue(diagnosticsIo, p),
+        copyReport: (p) => copyReport(diagnosticsIo, p),
+        // Renderer errors join main's own at the single scrub site, which is what
+        // makes the on-disk log already safe to attach.
+        captureRendererError: (report) => captureError({ ...report, origin: 'renderer' }),
+        revealLogs: () => {
+          const dir = getLogsDir()
+          if (!dir) return
+          shell.openPath(dir).then((err) => {
+            if (err) console.error('[diagnostics:revealLogs] could not open', dir, '-', err)
+          })
+        }
+      },
       readChangelog: async () => {
         try {
           return await readFile(join(app.getAppPath(), 'CHANGELOG.md'), 'utf8')
