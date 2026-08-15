@@ -43,7 +43,9 @@ keeps all of your data on your own machine.
 - **Readings** — a journal of your readings. Each reading holds a title, a date,
   a deck, an optional spread, and free-form notes. Each card entry holds its own
   topic, question, orientation, deck meaning, and your interpretation. Corvath
-  marks the readings that it drew for you.
+  marks the readings that it drew for you. Corvath asks you to confirm before it
+  deletes a reading, and it names the reading in the question. It also asks
+  before a spread replaces the cards in a reading that you already wrote in.
 - **Decks** — a deck builder that assumes no structure. Set the majors, the
   suits, the pip ranks, and the court ranks. Give each card a meaning, keywords,
   imported art, and a card back. Corvath ships four decks: **Rider-Waite-Smith**,

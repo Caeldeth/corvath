@@ -116,6 +116,14 @@ export default function Readings({
           onApplyLayout={(layout) => applyLayout(selectedReading.id, layout)}
           onAddEntry={() => addEntry(selectedReading.id)}
           onUpdateEntry={(entryId, patch) => updateEntry(selectedReading.id, entryId, patch)}
+          // DELIBERATELY UNCONFIRMED, unlike deleting a reading (HTOO-409).
+          // This removes one card row from the reading open in front of you:
+          // its topic, question and interpretation, all still on screen as you
+          // click. Re-adding it is one button. Deleting a READING destroys a
+          // whole journal entry from a list, with nothing shown of what is
+          // inside it — a different act with a different cost. Confirming both
+          // would make the cheap one tedious and teach the habit of dismissing
+          // the prompt, which is how the expensive one gets waved through.
           onDeleteEntry={(entryId) => deleteEntry(selectedReading.id, entryId)}
         />
       ) : (

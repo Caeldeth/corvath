@@ -13,7 +13,9 @@ import {
   Typography
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
+import { useState } from 'react'
 import type { Deck, Entry, Layout, LayoutPosition, Reading } from '../../../shared/types'
+import ConfirmDialog from './ConfirmDialog'
 import EntryCard from './EntryCard'
 import LayoutBoard, { type PositionArt } from './layouts/LayoutBoard'
 
@@ -44,10 +46,16 @@ export default function ReadingEditor({
   const currentDeck = decks.find((d) => d.name === reading.deck) ?? null
   const activeLayout = layouts.find((l) => l.id === reading.layoutId) ?? null
 
+  // The layout awaiting confirmation, or null. `window.confirm` let this be a
+  // synchronous early return; a real dialog cannot, so the choice is parked here
+  // and applied from the dialog's own callback.
+  const [pendingLayout, setPendingLayout] = useState<Layout | null>(null)
+
   const handleSelectLayout = (layoutId: string): void => {
     const layout = layouts.find((l) => l.id === layoutId) ?? null
     const hasContent = reading.entries.some((e) => e.topic || e.question || e.card)
-    if (hasContent && !window.confirm('Applying a layout replaces the current cards. Continue?')) {
+    if (hasContent) {
+      setPendingLayout(layout)
       return
     }
     onApplyLayout(layout)
@@ -187,6 +195,25 @@ export default function ReadingEditor({
           minRows={4}
         />
       </Stack>
+
+      <ConfirmDialog
+        open={pendingLayout !== null}
+        title="Replace the cards in this reading?"
+        message={
+          <>
+            Applying <strong>{pendingLayout?.name || 'this spread'}</strong> replaces the cards
+            currently in this reading, and the topics, questions and interpretations written on
+            them. This cannot be undone.
+          </>
+        }
+        confirmLabel="Replace"
+        destructive
+        onConfirm={() => {
+          onApplyLayout(pendingLayout)
+          setPendingLayout(null)
+        }}
+        onCancel={() => setPendingLayout(null)}
+      />
     </Box>
   )
 }

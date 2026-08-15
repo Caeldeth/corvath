@@ -14,7 +14,9 @@ import CasinoOutlinedIcon from '@mui/icons-material/CasinoOutlined'
 import FileUploadOutlinedIcon from '@mui/icons-material/FileUploadOutlined'
 import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
+import { useState } from 'react'
 import type { Reading } from '../../../shared/types'
+import ConfirmDialog from './ConfirmDialog'
 
 interface ReadingListProps {
   readings: Reading[]
@@ -41,6 +43,11 @@ export default function ReadingList({
 }: ReadingListProps) {
   // Most recent reading date first.
   const sorted = [...readings].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
+
+  // The reading awaiting confirmation, or null. Held here rather than in
+  // Readings.tsx so the `onDelete` contract is unchanged: the parent still
+  // receives one call, and it still means "this is gone".
+  const [pendingDelete, setPendingDelete] = useState<Reading | null>(null)
 
   return (
     <Box
@@ -120,7 +127,7 @@ export default function ReadingList({
                         aria-label="delete reading"
                         onClick={(e) => {
                           e.stopPropagation()
-                          onDelete(reading.id)
+                          setPendingDelete(reading)
                         }}
                       >
                         <DeleteOutlineIcon fontSize="small" />
@@ -149,6 +156,27 @@ export default function ReadingList({
           </List>
         )}
       </Box>
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title="Delete this reading?"
+        // Named rather than generic. "Delete this reading?" is answerable
+        // without reading it; naming the one in hand is not.
+        message={
+          <>
+            <strong>{pendingDelete?.title || 'Untitled Reading'}</strong>
+            {pendingDelete ? ` — ${pendingDelete.date}` : ''} will be deleted. Its notes and every
+            card you interpreted go with it. This cannot be undone.
+          </>
+        }
+        confirmLabel="Delete"
+        destructive
+        onConfirm={() => {
+          if (pendingDelete) onDelete(pendingDelete.id)
+          setPendingDelete(null)
+        }}
+        onCancel={() => setPendingDelete(null)}
+      />
     </Box>
   )
 }
