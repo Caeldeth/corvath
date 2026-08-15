@@ -242,5 +242,27 @@ export interface TarotApi {
   revealSettings(): void
   /** The packaged CHANGELOG.md as raw markdown, or '' if it cannot be read. */
   readChangelog(): Promise<string>
+  diagnostics: {
+    /** The scrubbed diagnostics block, rebuilt on each dialog open. */
+    build(): Promise<string>
+    /** Copy the full report, then open a prefilled issue on the intake repo. */
+    openIssue(title: string, body: string): Promise<OpenIssueResult>
+    /** The clipboard alone. No account, no browser, no length budget. */
+    copyReport(body: string): Promise<{ ok: true }>
+    /** Forward an uncaught renderer error to main's capture site. */
+    reportError(report: RendererErrorReport): void
+    /** Open the session-logs folder in the OS file manager. */
+    revealLogs(): void
+  }
   window: WindowControls
+}
+
+/** The outcome of opening a prefilled issue on the public intake repository. */
+export type OpenIssueResult = { ok: true; truncated: boolean } | { ok: false; reason: 'unsafe-url' }
+
+/** One captured error, as the renderer forwards it to main. */
+export interface RendererErrorReport {
+  source: string
+  message: string
+  stack?: string
 }
