@@ -1,13 +1,5 @@
 import { useEffect, useState } from 'react'
-import {
-  Alert,
-  Box,
-  Button,
-  CircularProgress,
-  CssBaseline,
-  Snackbar,
-  ThemeProvider
-} from '@mui/material'
+import { Box, CircularProgress, CssBaseline, ThemeProvider } from '@mui/material'
 import type { ThemeName, UpdateInfo } from '../../shared/types'
 import { hybrasylTheme, themes } from './themes'
 import { useSettingsStore } from './store/settingsStore'
@@ -17,6 +9,7 @@ import { useLayoutsStore } from './store/layoutsStore'
 import { useDecks } from './hooks/useDecks'
 import { useLayouts } from './hooks/useLayouts'
 import TitleBar from './components/TitleBar'
+import UpdateSnackbar from './components/UpdateSnackbar'
 import NavBar, { type View } from './components/NavBar'
 import Readings from './pages/Readings'
 import Draw from './pages/Draw'
@@ -159,32 +152,7 @@ function App(): React.JSX.Element {
         {view === 'decks' && <DeckBuilder api={decksApi} />}
         {view === 'layouts' && <Layouts api={layoutsApi} />}
 
-        <Snackbar
-          open={!!update}
-          onClose={() => setUpdate(null)}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        >
-          {update ? (
-            <Alert
-              severity="info"
-              variant="filled"
-              onClose={() => setUpdate(null)}
-              action={
-                update.url ? (
-                  <Button
-                    color="inherit"
-                    size="small"
-                    onClick={() => window.open(update.url, '_blank')}
-                  >
-                    View
-                  </Button>
-                ) : undefined
-              }
-            >
-              Corvath {update.version} is available.
-            </Alert>
-          ) : undefined}
-        </Snackbar>
+        <UpdateSnackbar update={update} onDismiss={() => setUpdate(null)} />
       </Box>
     </ThemeProvider>
   )
