@@ -69,9 +69,12 @@ portable extraction splash, and this docs layout.
 
 ### Open follow-ups, not blocking
 
-- **Draw-tab UI is not automated.** The draw engine has unit tests and boot/settings/theme
-  have Playwright specs, but nobody has click-tested both draw modes for animation, art and
-  fan row-fit. Worth an eyeball pass in `npm run dev` before the tag.
+- ~~**Draw-tab UI is not automated.**~~ **Fixed 2026-08-15 (HTOO-233).** `e2e/draw.spec.js`
+  covers both modes, the fan row-fit measurement, the pinned-slot path and the save handoff
+  onto disk. The same pass fixed two harness faults: `launchApp` was launching
+  `out/main/index.js` rather than the project directory (so `app.getVersion()` reported
+  Electron's own version), and it could seed only `settings.json`, which left `planFan`'s
+  pinned-slot branch unreachable because no built-in layout sets a position `source`.
 - ~~**Seed overwrites user edits.**~~ **Fixed 2026-08-14 (HTOO-231).** `mergeSeedDeck` now
   decides each field by provenance: a per-field fingerprint records what corvath itself
   shipped, so a `seedVersion` bump replaces only text that still matches what we wrote.

@@ -261,7 +261,17 @@ export default function Draw({ decks, layouts, onDone }: DrawProps): ReactElemen
         {session.slots.map((slot, i) => {
           const card = assignedFor(i)
           return (
-            <Stack key={i} spacing={0.75} sx={{ width: CARD_W + 24, alignItems: 'center' }}>
+            <Stack
+              key={i}
+              // E2E hooks: the tray is otherwise anonymous divs, and whether a
+              // slot has been filled is only expressed as a 3D transform.
+              data-testid="draw-slot"
+              data-slot-index={i}
+              data-flipped={!!card}
+              data-card-name={card?.name ?? ''}
+              spacing={0.75}
+              sx={{ width: CARD_W + 24, alignItems: 'center' }}
+            >
               <DrawCard
                 flipped={!!card}
                 faceUrl={card ? faceUrl(card) : undefined}
@@ -325,11 +335,18 @@ export default function Draw({ decks, layouts, onDone }: DrawProps): ReactElemen
           return (
             <Box
               key={r}
+              data-testid="fan-row"
+              data-row-step={step}
               sx={{ display: 'flex', justifyContent: 'center', mb: r < rows - 1 ? 1.5 : 0 }}
             >
               {row.map((gi, ci) => (
                 <Box
                   key={gi}
+                  // A fan card carries no text, role or index of its own, and
+                  // `spent` is only an opacity — so a spec has nothing to grip.
+                  data-testid="fan-card"
+                  data-fan-index={gi}
+                  data-spent={used.has(gi)}
                   sx={{
                     ml: ci === 0 ? 0 : `${step - FAN_W}px`,
                     position: 'relative',
@@ -445,8 +462,14 @@ export default function Draw({ decks, layouts, onDone }: DrawProps): ReactElemen
           size="small"
           sx={{ mt: 0.5 }}
         >
-          <ToggleButton value="deal">Deal from top</ToggleButton>
-          <ToggleButton value="fan">Fan &amp; pick</ToggleButton>
+          {/* The `deal`/`fan` values never reach the DOM, so a spec cannot
+              assert which mode is selected without these. */}
+          <ToggleButton value="deal" data-testid="draw-mode-deal">
+            Deal from top
+          </ToggleButton>
+          <ToggleButton value="fan" data-testid="draw-mode-fan">
+            Fan &amp; pick
+          </ToggleButton>
         </ToggleButtonGroup>
         <Typography variant="caption" sx={{ display: 'block', mt: 0.75, opacity: 0.6 }}>
           {mode === 'deal'

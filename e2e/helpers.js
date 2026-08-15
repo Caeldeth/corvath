@@ -6,33 +6,55 @@ import { tmpdir } from 'os'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 export const repoRoot = join(__dirname, '..')
-export const mainEntry = join(repoRoot, 'out', 'main', 'index.js')
 
 // The app's userData subdir under %LOCALAPPDATA%. Must match src/main/index.ts
 // (`join(localAppData, 'Erisco', 'Corvath')`).
 export const USERDATA_SUBPATH = ['Erisco', 'Corvath']
+
+/** Pre-write one of the app's JSON stores into a profile dir before launch. */
+function seedStore(localAppData, filename, contents) {
+  const dir = join(localAppData, ...USERDATA_SUBPATH)
+  mkdirSync(dir, { recursive: true })
+  writeFileSync(join(dir, filename), JSON.stringify(contents, null, 2))
+}
 
 // Launch the BUILT app under Electron.
 //
 // %LOCALAPPDATA% is redirected to a throwaway temp dir because src/main/index.ts
 // derives its userData (settings.json) from %LOCALAPPDATA% at module load —
 // pointing it at a temp dir keeps every run hermetic and off the real profile.
-// Pass `seedSettings` to pre-write settings.json; pass an existing `localAppData`
-// to reuse one dir across two launches (persistence-across-relaunch tests).
-export async function launchApp({ seedSettings, localAppData: reuseDir } = {}) {
+// Pass an existing `localAppData` to reuse one dir across two launches
+// (persistence-across-relaunch tests).
+//
+// The `seed*` options pre-write a store so a spec can reach state the shipped
+// data cannot. `seedLayouts` exists for the draw specs specifically: no built-in
+// layout sets a position `source`, so the pinned-slot path in `planFan` is
+// unreachable with seeded data alone.
+export async function launchApp({
+  seedSettings,
+  seedDecks,
+  seedLayouts,
+  seedReadings,
+  localAppData: reuseDir
+} = {}) {
   const localAppData = reuseDir ?? mkdtempSync(join(tmpdir(), 'hyb-e2e-'))
-  if (seedSettings) {
-    const dir = join(localAppData, ...USERDATA_SUBPATH)
-    mkdirSync(dir, { recursive: true })
-    writeFileSync(join(dir, 'settings.json'), JSON.stringify(seedSettings, null, 2))
-  }
+  if (seedSettings) seedStore(localAppData, 'settings.json', seedSettings)
+  // The store files are versioned envelopes, not bare arrays — see src/main/store.ts.
+  if (seedDecks) seedStore(localAppData, 'decks.json', { version: 1, decks: seedDecks })
+  if (seedLayouts) seedStore(localAppData, 'layouts.json', { version: 1, layouts: seedLayouts })
+  if (seedReadings) seedStore(localAppData, 'readings.json', { version: 1, readings: seedReadings })
   // Strip ELECTRON_RUN_AS_NODE — if it's set in the parent environment (some
   // Electron-hosted terminals set it), the launched electron binary runs as
   // plain Node (no `app`, no windows) and the main process throws at
   // app.setPath. We want a real Electron app here.
   const env = { ...process.env, LOCALAPPDATA: localAppData, NODE_ENV: 'test' }
   delete env.ELECTRON_RUN_AS_NODE
-  const electronApp = await electron.launch({ args: [mainEntry], cwd: repoRoot, env })
+  // Launch the project DIRECTORY, not out/main/index.js. Given a file, Electron
+  // treats that file as the whole app and never reads the repo's package.json,
+  // so app.getVersion() returns ELECTRON's version and app.getAppPath() returns
+  // out/main — both differing from a packaged build, which is the one thing
+  // these specs exist to model. See the house E2E doc §3.5.
+  const electronApp = await electron.launch({ args: ['.'], cwd: repoRoot, env })
   return { electronApp, localAppData }
 }
 
