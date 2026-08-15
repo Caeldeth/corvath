@@ -542,7 +542,10 @@ export default function Draw({ decks, layouts, onDone }: DrawProps): ReactElemen
   }
 
   return (
-    <Box sx={{ flexGrow: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+    <Box
+      data-testid="draw-page"
+      sx={{ flexGrow: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}
+    >
       <Box sx={{ flexGrow: 1, overflowY: 'auto', p: 3 }}>
         {session ? renderDraw() : renderSetup()}
       </Box>

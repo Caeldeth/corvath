@@ -181,7 +181,29 @@ app.whenReady().then(async () => {
   // to validate its sender.
   registerHandlers(
     { ipcMain: guardIpc(ipcMain), BrowserWindow, dialog },
-    { store, onAppReady: revealMainWindow }
+    {
+      store,
+      onAppReady: revealMainWindow,
+      appVersion: () => app.getVersion(),
+      // The folder every corvath file lives in, which is what a user asking
+      // "where are my readings" wants — not the parent, and not a single file.
+      revealSettings: () => {
+        shell.openPath(dataPath).then((err) => {
+          if (err) console.error('[app:revealSettings] could not open', dataPath, '-', err)
+        })
+      },
+      // CHANGELOG.md is named in electron-builder.yml's `files` allowlist purely
+      // so this can read it. In dev the app root is the repo, so the same path
+      // resolves either way.
+      readChangelog: async () => {
+        try {
+          return await readFile(join(app.getAppPath(), 'CHANGELOG.md'), 'utf8')
+        } catch (err) {
+          console.error('[app:readChangelog] could not read the changelog -', err)
+          return ''
+        }
+      }
+    }
   )
   setTimeout(revealMainWindow, 15000)
 

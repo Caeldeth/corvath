@@ -19,6 +19,9 @@ test.describe('Settings persist across a restart', () => {
     ;({ electronApp, localAppData } = await launchApp())
     let page = await getMainWindow(electronApp)
 
+    // The theme picker lives on the Settings page now, not the title bar
+    // (HTOO-408).
+    await page.getByRole('tab', { name: 'Settings', exact: true }).click()
     // Pick a non-default theme (default is hybrasyl).
     await page.getByTestId('theme-select').click()
     await page.getByRole('option', { name: 'Mundanes', exact: true }).click()

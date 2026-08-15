@@ -9,6 +9,7 @@ import { useLayoutsStore } from './store/layoutsStore'
 import { useDecks } from './hooks/useDecks'
 import { useLayouts } from './hooks/useLayouts'
 import TitleBar from './components/TitleBar'
+import SettingsPage from './pages/SettingsPage'
 import UpdateSnackbar from './components/UpdateSnackbar'
 import NavBar, { type View } from './components/NavBar'
 import Readings from './pages/Readings'
@@ -127,7 +128,7 @@ function App(): React.JSX.Element {
           bgcolor: 'background.default'
         }}
       >
-        <TitleBar themeName={themeName} onThemeChange={changeTheme} />
+        <TitleBar themeName={themeName} />
         <NavBar view={view} onChange={setView} />
 
         {view === 'readings' && (
@@ -151,6 +152,7 @@ function App(): React.JSX.Element {
         )}
         {view === 'decks' && <DeckBuilder api={decksApi} />}
         {view === 'layouts' && <Layouts api={layoutsApi} />}
+        {view === 'settings' && <SettingsPage theme={themeName} onThemeChange={changeTheme} />}
 
         <UpdateSnackbar update={update} onDismiss={() => setUpdate(null)} />
       </Box>

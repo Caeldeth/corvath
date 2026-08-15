@@ -35,6 +35,10 @@ keeps all of your data on your own machine.
 
 ### Added
 
+- **Settings** — a Settings page holds the theme picker and an About card. The
+  About card names this build's version, links to hybrasyl.com and the source,
+  shows the newest changelog entry, and opens the folder that holds your data.
+  The theme picker moved here from the title bar.
 - **Draw** — draw a reading against any deck. Use a saved spread, or draw a free
   run of N cards. Corvath gives you two modes. **Deal from top** turns over one
   slot at a time, and obeys the draw source that each position sets. **Fan and
