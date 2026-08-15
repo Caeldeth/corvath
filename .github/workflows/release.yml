@@ -85,6 +85,20 @@ jobs:
       - name: Package installer + portable exe
         run: npx electron-builder --win --publish never
 
+      # HTOO-403. The electronFuses block in electron-builder.yml is proof that
+      # electron-builder was ASKED, not that it did it -- the wire is burned in
+      # during packaging, so an electron-builder major, a target change or an
+      # afterPack hook can stop it applying with the YAML untouched and every
+      # gate green. Read it back off the artifact.
+      #
+      # BEFORE signing, deliberately: signing rewrites the executable, and a
+      # check that ran after it would be testing a different file than the one
+      # whose fuses we care about. Both Windows artifacts wrap this same
+      # win-unpacked directory -- the portable exe as a self-extracting stub, the
+      # installer by writing it to disk -- so this one read covers both.
+      - name: Verify Electron fuses on the packaged exe
+        run: node scripts/verify-fuses.mjs dist/win-unpacked/corvath.exe
+
       - name: Resolve artifact name + version
         id: pkg
         shell: bash
@@ -236,6 +250,12 @@ jobs:
 
       - name: Package AppImage + deb
         run: npx electron-builder --linux --publish never
+
+      # Same read as the Windows job. Cheap here because the unpacked tree is
+      # already on disk beside the AppImage, and it is a second architecture's
+      # worth of evidence that the fuse step is running at all.
+      - name: Verify Electron fuses on the packaged binary
+        run: node scripts/verify-fuses.mjs dist/linux-unpacked/corvath
 
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v7
