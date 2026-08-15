@@ -139,3 +139,50 @@ test.describe('Settings page', () => {
     expect(await dialog.locator('strong').count()).toBeGreaterThan(0)
   })
 })
+
+test.describe('Draw defaults', () => {
+  let electronApp
+
+  test.afterEach(async () => {
+    await electronApp?.close()
+  })
+
+  test('a chosen default reaches the Draw tab and survives a relaunch', async () => {
+    // The full chain, which no unit test spans: Settings control -> screened
+    // setter -> debounced whole-document save -> settingsSchema -> disk ->
+    // hydrate -> Draw's lazy initial state.
+    let localAppData
+    ;({ electronApp, localAppData } = await launchApp())
+    let page = await getMainWindow(electronApp)
+
+    await page.getByRole('tab', { name: 'Settings', exact: true }).click()
+    await page.getByTestId('default-deck-select').click()
+    await page.getByRole('option', { name: 'Empyrean', exact: true }).click()
+    await page.getByTestId('default-mode-select').click()
+    await page.getByRole('option', { name: 'Fan & pick', exact: true }).click()
+
+    // It reached disk, which is the step that would silently fail if the field
+    // were missing from settingsSchema — the save strips unknown keys.
+    await expect
+      .poll(() => page.evaluate(() => window.api.loadSettings().then((s) => s.defaultDeckId)), {
+        timeout: 5000
+      })
+      .toBe('empyrean')
+    await expect
+      .poll(() => page.evaluate(() => window.api.loadSettings().then((s) => s.defaultDrawMode)))
+      .toBe('fan')
+
+    // The theme still saves too. One rejected field would take the whole
+    // document with it, and the theme is the field that would be missed.
+    expect(await page.evaluate(() => window.api.loadSettings().then((s) => s.theme))).toBeTruthy()
+
+    await electronApp.close()
+
+    ;({ electronApp } = await launchApp({ localAppData }))
+    page = await getMainWindow(electronApp)
+    await page.getByRole('tab', { name: 'Draw', exact: true }).click()
+
+    await expect(page.getByRole('combobox', { name: 'Deck' })).toContainText('Empyrean')
+    await expect(page.getByTestId('draw-mode-fan')).toHaveAttribute('aria-pressed', 'true')
+  })
+})

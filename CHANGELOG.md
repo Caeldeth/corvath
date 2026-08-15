@@ -39,6 +39,10 @@ keeps all of your data on your own machine.
   About card names this build's version, links to hybrasyl.com and the source,
   shows the newest changelog entry, and opens the folder that holds your data.
   The theme picker moved here from the title bar.
+- **Draw defaults** — Settings sets the deck, the spread, and the draw mode that
+  the Draw tab starts on. You can still change each one for a single draw. If you
+  delete a deck or a spread that a default names, Corvath uses the first one
+  again.
 - **Report an issue** — the About card opens a report dialog. Corvath shows you
   the diagnostics it will attach, and you can edit them before you send. Corvath
   removes usernames, file paths, e-mail addresses and IP addresses from the text
