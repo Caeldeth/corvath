@@ -215,6 +215,166 @@ export function guardIpc(ipcMain: IpcMain): IpcMain {
   })
 }
 
+// ---------------------------------------------------------------------------
+// Content-Security-Policy, served as a HEADER
+//
+// HTOO-402, the third instance of a shape taliesin (HTOO-164) and balor
+// (HTOO-391) already closed; this is a port of balor's, not a reinvention.
+//
+// Corvath already carried a good `<meta http-equiv>` policy in
+// `src/renderer/index.html`, and it stays as defence in depth. But a meta policy
+// is applied by the PARSER, so it governs nothing that happens before the parser
+// reaches it and cannot express the directives that exist only as headers
+// (`frame-ancestors`, `sandbox`, `report-to`). A header applies to the response
+// itself. The two are not interchangeable.
+// ---------------------------------------------------------------------------
+
+/**
+ * The renderer's policy, single-sourced here and kept **identical** to the meta
+ * tag in `src/renderer/index.html`.
+ *
+ * A meta policy and a header policy INTERSECT rather than override, so any
+ * directive tightened here and not there (or vice versa) silently becomes the
+ * stricter of the two — which is how a header CSP turns into a rendering bug
+ * discovered weeks later. A unit test pins the two together.
+ *
+ * **`corvath-asset:` in `img-src` is load-bearing and is corvath's own.** It is
+ * the custom scheme every deck image is served over; a policy copied from a
+ * sibling will not have it, and dropping it blanks every card in the app with no
+ * symptom beyond a console line.
+ */
+export const RENDERER_CSP =
+  "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; " +
+  "font-src 'self' data:; img-src 'self' data: blob: corvath-asset:;"
+
+/**
+ * The splash's policy, deliberately TIGHTER than the renderer's.
+ *
+ * `resources/splash.html` is one inline `<style>`, one same-origin `<img>` and
+ * **no script at all** — it is self-contained so it can paint before the
+ * renderer bundle exists. So it needs no `script-src` grant whatsoever.
+ *
+ * It is served the renderer policy in the header and carries this one in its own
+ * meta tag; because the two intersect, the splash ends up under the stricter of
+ * them, which is this. Selecting a policy per URL in the header would mean path
+ * matching against an asar URL — fragile, for an outcome the intersection
+ * already gives.
+ */
+export const SPLASH_CSP = "default-src 'none'; style-src 'unsafe-inline'; img-src 'self'"
+
+/**
+ * The DEVELOPMENT policy: `RENDERER_CSP` with `'unsafe-inline'` added to
+ * `script-src`, and nothing else changed.
+ *
+ * `@vitejs/plugin-react` injects the React Refresh preamble as an INLINE
+ * `<script>` at the top of `<head>`, and the HMR client is inline too. Under
+ * `script-src 'self'` Chromium refuses the preamble, the plugin throws
+ * `can't detect preamble`, and the window never renders.
+ *
+ * **The meta tag never blocked this, which is precisely the point of the card.**
+ * A meta policy applies from where the parser reaches it, and the preamble is
+ * injected above it — so the tag let through exactly the code a header stops.
+ *
+ * Keyed on `NODE_ENV === 'development'`, **not** `app.isPackaged`: the e2e suite
+ * runs the built app via `electron .`, where `isPackaged` is false. Keying on it
+ * would hand the relaxed policy to the only automated check that drives a real
+ * renderer, leaving the production policy tested nowhere. electron-vite sets
+ * `development`; `e2e/helpers.js` sets `test`.
+ */
+export const DEV_RENDERER_CSP = RENDERER_CSP.replace(
+  "script-src 'self'",
+  "script-src 'self' 'unsafe-inline'"
+)
+
+/** The policy for this launch. Production unless electron-vite says otherwise. */
+export function cspForEnvironment(nodeEnv: string | undefined): string {
+  return nodeEnv === 'development' ? DEV_RENDERER_CSP : RENDERER_CSP
+}
+
+/** The header name, lower-cased once so the strip and the write cannot disagree. */
+const CSP_HEADER = 'content-security-policy'
+
+/**
+ * Schemes whose responses we stamp. An allowlist rather than "everything":
+ * `devtools:` is not our content to police, and `corvath-asset:` responses are
+ * raw image bytes served by our own handler, where a document policy means
+ * nothing.
+ */
+const POLICED_PROTOCOLS = new Set(['file:', 'http:', 'https:'])
+
+/** The shapes of `onHeadersReceived` we use, named so this module needs no
+ *  runtime `electron` import and the unit tests need no electron stub. */
+interface HeadersReceivedDetails {
+  url: string
+  responseHeaders?: Record<string, string[]> | undefined
+}
+interface HeadersReceivedResponse {
+  responseHeaders?: Record<string, string[]> | undefined
+}
+export interface CspSession {
+  webRequest: {
+    onHeadersReceived(
+      listener: (
+        details: HeadersReceivedDetails,
+        callback: (response: HeadersReceivedResponse) => void
+      ) => void
+    ): void
+  }
+}
+
+/** True when a response at this URL should carry our policy. */
+export function isPolicedUrl(rawUrl: string): boolean {
+  let url: URL
+  try {
+    url = new URL(rawUrl)
+  } catch {
+    // A URL we cannot parse is POLICED, not exempted. A header can only ever
+    // restrict, so this direction fails closed: the worst case is a policy on
+    // something that did not need one.
+    return true
+  }
+  return POLICED_PROTOCOLS.has(url.protocol)
+}
+
+/**
+ * Strip every existing CSP header, then write ours.
+ *
+ * **Replaced, not added to.** Two CSP headers intersect, so leaving one in place
+ * would make the effective policy a function of whoever else set it. Header names
+ * are case-insensitive, so the match is too — and the `-report-only` variant goes
+ * with it, because a report-only policy left behind is still a policy in a
+ * response we did not write.
+ */
+export function applyCspHeaders(
+  headers: Record<string, string[]> | undefined,
+  policy: string
+): Record<string, string[]> {
+  const next: Record<string, string[]> = {}
+  for (const [name, value] of Object.entries(headers ?? {})) {
+    const lower = name.toLowerCase()
+    if (lower === CSP_HEADER || lower === `${CSP_HEADER}-report-only`) continue
+    next[name] = value
+  }
+  next['Content-Security-Policy'] = [policy]
+  return next
+}
+
+/**
+ * Put the policy on every response the renderer loads.
+ *
+ * `session` is INJECTED rather than imported, like the rest of this module, so
+ * the unit tests need no electron at all.
+ */
+export function installContentSecurityPolicy(session: CspSession, policy = RENDERER_CSP): void {
+  session.webRequest.onHeadersReceived((details, callback) => {
+    if (!isPolicedUrl(details.url)) {
+      callback({ responseHeaders: details.responseHeaders })
+      return
+    }
+    callback({ responseHeaders: applyCspHeaders(details.responseHeaders, policy) })
+  })
+}
+
 /** Test-only reset, so suites do not leak trusted windows or locations between
  *  cases. */
 export function __resetWindowSecurityForTests(): void {

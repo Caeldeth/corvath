@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, dialog, ipcMain, protocol } from 'electron'
+import { app, shell, BrowserWindow, dialog, ipcMain, protocol, session } from 'electron'
 import { join, extname } from 'path'
 import { readFile } from 'fs/promises'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
@@ -9,7 +9,14 @@ import { createStores } from './store'
 import { createSplashWindow } from './splash'
 import { registerHandlers } from './handlers'
 import { checkForUpdate } from './updateCheck'
-import { guardIpc, hardenWindow, initWindowSecurity, registerTrustedWindow } from './windowSecurity'
+import {
+  cspForEnvironment,
+  guardIpc,
+  hardenWindow,
+  initWindowSecurity,
+  installContentSecurityPolicy,
+  registerTrustedWindow
+} from './windowSecurity'
 
 // Everything — readings, decks, settings, and the disposable Electron cache —
 // lives under %LOCALAPPDATA%/Erisco/Corvath. On Windows Electron's appData path
@@ -146,6 +153,11 @@ app.whenReady().then(async () => {
     is.dev ? process.env['ELECTRON_RENDERER_URL'] : undefined,
     join(__dirname, '../renderer/index.html')
   )
+
+  // Serve the CSP as a HEADER as well as the meta tag in index.html. Installed
+  // here, before the splash loads, because the splash is the first document the
+  // app paints and a policy installed after it would miss it entirely.
+  installContentSecurityPolicy(session.defaultSession, cspForEnvironment(process.env.NODE_ENV))
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
