@@ -156,7 +156,14 @@ function App(): React.JSX.Element {
         )}
         {view === 'decks' && <DeckBuilder api={decksApi} />}
         {view === 'layouts' && <Layouts api={layoutsApi} />}
-        {view === 'settings' && <SettingsPage theme={themeName} onThemeChange={changeTheme} />}
+        {view === 'settings' && (
+          <SettingsPage
+            theme={themeName}
+            onThemeChange={changeTheme}
+            decks={decksApi.decks}
+            layouts={layoutsApi.layouts}
+          />
+        )}
 
         <UpdateSnackbar update={update} onDismiss={() => setUpdate(null)} />
         {/* Mounted here rather than in the About card because it has two

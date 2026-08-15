@@ -20,8 +20,22 @@ const drawModeSchema = z.enum(['deal', 'fan'])
 const deckSourceSchema = z.enum(['top', 'bottom'])
 const cardSectionSchema = z.enum(['major', 'minor'])
 
+// The schema field comes FIRST, always. `settings:save` parses through a plain
+// object schema, so a key the UI writes but the schema does not name is stripped
+// silently on every save and never reaches disk — the control simply forgets,
+// with no error anywhere.
+//
+// Bounded rather than a bare `z.string()`: the whole document is rejected if any
+// one field fails, so an over-long id pasted into settings.json by hand would
+// stop corvath persisting ANYTHING, theme included. The renderer also screens
+// these through `lib/settingsFields.ts` before they reach the store.
+const defaultIdSchema = z.string().max(200).optional()
+
 export const settingsSchema: z.ZodType<Settings> = z.object({
-  theme: themeNameSchema
+  theme: themeNameSchema,
+  defaultDeckId: defaultIdSchema,
+  defaultLayoutId: defaultIdSchema,
+  defaultDrawMode: drawModeSchema.optional()
 })
 
 const entrySchema = z.object({

@@ -1,13 +1,16 @@
 import type { ReactElement } from 'react'
 import { Box, Paper, Typography } from '@mui/material'
-import type { ThemeName } from '../../../shared/types'
+import type { Deck, Layout, ThemeName } from '../../../shared/types'
 import { cardDescSx, cardHeadingSx, cardSx } from '../lib/settingsCardSx'
 import ThemePicker from '../components/ThemePicker'
 import AboutCard from '../components/AboutCard'
+import DrawDefaultsCard from '../components/DrawDefaultsCard'
 
 interface SettingsPageProps {
   theme: ThemeName
   onThemeChange: (name: ThemeName) => void
+  decks: Deck[]
+  layouts: Layout[]
 }
 
 /**
@@ -17,14 +20,19 @@ interface SettingsPageProps {
  * `<Paper>` cards, one per concern — not a tab strip. A later WP adds cards to
  * this grid rather than rebuilding the shell.
  *
- * **It ships with Appearance and About only, and that is the whole roster for
- * now.** Three further candidates — a default deck, a default spread and a
- * default draw mode — are parked in `00a-backlog.md` behind the trigger that
- * would justify them. A setting that only ever takes its default is worse than
- * no setting: it is a control to render, a schema field to validate, a migration
- * to carry and a line of documentation, for nothing.
+ * Appearance, Draw defaults and About. The three draw defaults were the
+ * candidates HTOO-408 left open and Sabrael took on 2026-08-15; each is a choice
+ * a user would otherwise re-pick on every draw, which is the bar a setting has to
+ * clear here. A setting that only ever takes its default is worse than no
+ * setting — a control to render, a schema field to validate, a migration to
+ * carry and a line of documentation, for nothing.
  */
-export default function SettingsPage({ theme, onThemeChange }: SettingsPageProps): ReactElement {
+export default function SettingsPage({
+  theme,
+  onThemeChange,
+  decks,
+  layouts
+}: SettingsPageProps): ReactElement {
   return (
     <Box data-testid="settings-page" sx={{ flex: 1, minHeight: 0, overflow: 'auto', p: 3 }}>
       <Typography variant="h5" sx={{ mb: 3 }}>
@@ -44,6 +52,10 @@ export default function SettingsPage({ theme, onThemeChange }: SettingsPageProps
             Choose a theme. It applies at once and is remembered between launches.
           </Typography>
           <ThemePicker value={theme} onChange={onThemeChange} />
+        </Paper>
+
+        <Paper sx={cardSx}>
+          <DrawDefaultsCard decks={decks} layouts={layouts} />
         </Paper>
 
         <Paper sx={cardSx}>

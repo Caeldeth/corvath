@@ -30,6 +30,8 @@ import {
   type DrawnCard
 } from '../lib/draw'
 import { useReadings } from '../hooks/useReadings'
+import { useSettingsStore } from '../store/settingsStore'
+import { resolveDefault } from '../lib/settingsFields'
 import DrawCard, { CARD_W } from '../components/DrawCard'
 import CardPreview, { type PreviewCard } from '../components/CardPreview'
 
@@ -83,15 +85,29 @@ function chunkRows<T>(arr: T[], rows: number): T[][] {
 export default function Draw({ decks, layouts, onDone }: DrawProps): ReactElement {
   const { addReading } = useReadings()
 
-  // The component remounts whenever the Draw tab is entered, so lazy initial
-  // state from props is enough — no reset effect needed.
+  // The Settings tab's draw defaults, read ONCE as lazy initial state. The
+  // component remounts whenever the Draw tab is entered, so that is enough — and
+  // it is also what keeps a default from yanking the picker out from under a draw
+  // the user is in the middle of setting up.
+  //
+  // `resolveDefault` is what makes a deleted deck or spread harmless: a dangling
+  // id reads as "no default" and falls back to the first, rather than leaving an
+  // empty picker with a stale id behind it.
+  const defaultDeckId = useSettingsStore((s) => s.defaultDeckId)
+  const defaultLayoutId = useSettingsStore((s) => s.defaultLayoutId)
+  const defaultDrawMode = useSettingsStore((s) => s.defaultDrawMode)
+
   const [title, setTitle] = useState('Corvath Reading')
   const [date, setDate] = useState(today)
-  const [deckName, setDeckName] = useState(() => decks[0]?.name ?? '')
+  const [deckName, setDeckName] = useState(
+    () => (resolveDefault(decks, defaultDeckId) ?? decks[0])?.name ?? ''
+  )
   const [structure, setStructure] = useState<Structure>(() => (layouts.length ? 'spread' : 'free'))
-  const [layoutId, setLayoutId] = useState(() => layouts[0]?.id ?? '')
+  const [layoutId, setLayoutId] = useState(
+    () => (resolveDefault(layouts, defaultLayoutId) ?? layouts[0])?.id ?? ''
+  )
   const [count, setCount] = useState(3)
-  const [mode, setMode] = useState<DrawMode>('deal')
+  const [mode, setMode] = useState<DrawMode>(() => defaultDrawMode ?? 'deal')
 
   const [session, setSession] = useState<Session | null>(null)
   const [revealed, setRevealed] = useState(0)

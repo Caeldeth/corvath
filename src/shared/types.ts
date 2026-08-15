@@ -85,6 +85,16 @@ export interface Layout {
 
 export interface Settings {
   theme: ThemeName
+  /**
+   * Draw-tab defaults. All optional, and all referring to things the user can
+   * delete — a deck or a spread can be gone by the next launch, so the Draw tab
+   * treats an id that no longer resolves as "no default" rather than as an
+   * error. Storing ids rather than names is deliberate: a rename must not
+   * silently drop the default.
+   */
+  defaultDeckId?: string
+  defaultLayoutId?: string
+  defaultDrawMode?: DrawMode
 }
 
 export type CardSection = 'major' | 'minor'
