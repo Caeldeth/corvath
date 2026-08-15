@@ -1,6 +1,5 @@
 import { useEffect, useState, type ReactElement } from 'react'
 import {
-  Box,
   Button,
   Dialog,
   DialogActions,
@@ -9,6 +8,7 @@ import {
   Typography
 } from '@mui/material'
 import { latestChangelogSection } from '../lib/changelog'
+import Markdown from './Markdown'
 
 interface WhatsNewDialogProps {
   open: boolean
@@ -62,23 +62,7 @@ export default function WhatsNewDialog({ open, onClose }: WhatsNewDialogProps): 
             No changelog shipped with this build.
           </Typography>
         )}
-        {state === 'ready' && (
-          // Shown as written. The changelog is authored as prose plus bullets,
-          // and preserving its line structure reads better than flattening it.
-          <Box
-            component="pre"
-            sx={{
-              m: 0,
-              whiteSpace: 'pre-wrap',
-              wordBreak: 'break-word',
-              fontFamily: 'inherit',
-              fontSize: '0.875rem',
-              lineHeight: 1.5
-            }}
-          >
-            {body}
-          </Box>
-        )}
+        {state === 'ready' && <Markdown source={body} />}
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Close</Button>

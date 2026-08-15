@@ -98,5 +98,14 @@ test.describe('Settings page', () => {
     // The release-process HTML comment sits above the first heading and contains
     // `##` examples of its own; leaking it here means the comment strip broke.
     await expect(dialog).not.toContainText('Release process')
+
+    // RENDERED, not raw. A markdown marker surviving into the text means the
+    // parser matched the line as prose and the user is reading source.
+    const text = await dialog.innerText()
+    expect(text).not.toMatch(/\*\*/)
+    expect(text).not.toMatch(/^\s*[-*]\s/m)
+    // And the structure really is structure: real <li> and <strong> elements.
+    expect(await dialog.locator('li').count()).toBeGreaterThan(3)
+    expect(await dialog.locator('strong').count()).toBeGreaterThan(0)
   })
 })
